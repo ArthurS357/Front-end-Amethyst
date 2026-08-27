@@ -79,18 +79,6 @@ function DeleteLuaToolsForApp(appid)
     return backend_request("POST", "/remove/" .. tostring(appid))
 end
 
-function CheckApisForApp(appid)
-    return backend_request("POST", "/check-sources/" .. tostring(appid))
-end
-
-function StartAddViaLuaToolsFromUrl(appid, source)
-    return backend_request("POST", "/download/" .. tostring(appid), { source = source })
-end
-
-function GetAddViaLuaToolsStatus(appid)
-    return backend_request("GET", "/download-status/" .. tostring(appid))
-end
-
 function CancelAddViaLuaTools(appid)
     return backend_request("POST", "/cancel/" .. tostring(appid))
 end

@@ -31,8 +31,10 @@
             }
         }
 
-        .active-focus {
-            animation: gamepad-focus-pulse 1.5s ease-in-out infinite;
+        @media (prefers-reduced-motion: no-preference) {
+            .active-focus {
+                animation: gamepad-focus-pulse 1.5s ease-in-out infinite;
+            }
         }
 
         button.active-focus,
@@ -81,7 +83,9 @@
             scroll-margin: 20px;
         }
     `;
-  document.head.appendChild(gamepadCSS);
+  // Gamepad nav only runs in Big Picture (see init), and this sheet puts a global
+  // transition on every button/a/input of the Steam page — don't inject it otherwise.
+  if (isBigPictureMode()) document.head.appendChild(gamepadCSS);
 
   // Gamepad Navigation System
   // ALL LuaTools overlays that should block Steam navigation
@@ -143,7 +147,6 @@
   }
 
   function onGamepadConnected(event) {
-    console.log("[Gamepad] Gamepad conectado en Millennium:", event.gamepad.id);
     state.gamepadConnected = true;
     state.gamepadIndex = event.gamepad.index;
     if (!state.animationFrameId) {
@@ -154,7 +157,6 @@
   }
 
   function onGamepadDisconnected(event) {
-    console.log("[Gamepad] Gamepad disconnected:", event.gamepad.id);
     if (state.gamepadIndex === event.gamepad.index) {
       state.gamepadConnected = false;
       state.gamepadIndex = null;
@@ -172,7 +174,6 @@
     const activeOverlay = document.querySelector(OVERLAY_SELECTOR_STRING);
 
     if (!activeOverlay) {
-      console.log("[Gamepad] No LuaTools overlay active, skipping scan");
       state.focusableElements = [];
       state.currentFocusIndex = 0;
       return;
@@ -204,12 +205,6 @@
       );
     });
 
-    console.log(
-      "[Gamepad] Scanned " +
-        state.focusableElements.length +
-        " focusable elements inside overlay",
-    );
-
     if (state.focusableElements.length > 0) {
       focusElement(0);
     }
@@ -237,7 +232,6 @@
         block: "nearest",
         inline: "nearest",
       });
-      console.log("[Gamepad] Focused element " + index + ":", element);
     }
   }
 
@@ -314,7 +308,6 @@
     switch (buttonIndex) {
       case CONFIG.buttonMap.A:
         if (element) {
-          console.log("[Gamepad] A button: clicking element", element);
           element.click();
           setTimeout(scanFocusableElements, 100);
         }
@@ -322,7 +315,6 @@
 
       case CONFIG.buttonMap.B:
         // B button disabled - users should use modal buttons
-        console.log("[Gamepad] B button pressed - ignoring");
         break;
 
       case CONFIG.buttonMap.DPAD_UP:
@@ -427,7 +419,6 @@
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        console.log("[Gamepad] Blocked Steam navigation key:", event.key);
         return false;
       }
     }
@@ -447,7 +438,6 @@
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        console.log("[Gamepad] Blocked click outside overlay");
         return false;
       }
     }
@@ -457,7 +447,6 @@
   function blockHistoryNavigation(event) {
     const hasActiveOverlay = document.querySelector(OVERLAY_SELECTOR_STRING);
     if (hasActiveOverlay && state.gamepadConnected) {
-      console.log("[Gamepad] Blocked history navigation (popstate)");
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
@@ -469,11 +458,8 @@
 
   function init() {
     if (!isBigPictureMode()) {
-      console.log("[Gamepad] Not in Big Picture Mode, skipping initialization");
       return;
     }
-
-    console.log("[Gamepad] Initializing Gamepad Navigation System...");
 
     window.addEventListener("gamepadconnected", onGamepadConnected);
     window.addEventListener("gamepaddisconnected", onGamepadDisconnected);
@@ -500,8 +486,6 @@
     }
 
     // Don't scan on init - only scan when overlays are opened
-
-    console.log("[Gamepad] Initialization complete");
   }
 
   if (document.readyState === "loading") {
@@ -658,7 +642,6 @@
         });
       },
       GetGamesDatabase: () => Promise.resolve({ success: true, database: {} }),
-      GetThemes: () => Promise.resolve({ success: true, themes: [] }),
       GetIconDataUrl: () => Promise.resolve({ success: true, dataUrl: "data:image/png;base64,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" }),
       CheckForFixes: () =>
         Promise.resolve({ success: true, hasFix: false, fixes: [] }),
@@ -724,22 +707,15 @@
   // Detect and save mode at startup
   window.__LUATOOLS_IS_BIG_PICTURE__ = isBigPictureMode();
 
-  // Forward logs to Millennium backend so they appear in the dev console
+  // Diagnostics sink. This used to relay to "Logger.log" over the bridge, but the local
+  // Millennium shim above has no such entry, so every call resolved to a benign
+  // {success:true} and nothing was ever logged anywhere. Write to the dev console instead.
   function backendLog(message) {
     try {
-      if (
-        typeof Millennium !== "undefined" &&
-        typeof Millennium.callServerMethod === "function"
-      ) {
-        Millennium.callServerMethod("luatools", "Logger.log", {
-          message: String(message),
-        });
+      if (typeof console !== "undefined" && console.debug) {
+        console.debug("[LuaTools]", String(message));
       }
-    } catch (err) {
-      if (typeof console !== "undefined" && console.warn) {
-        console.warn("[LuaTools] backendLog failed", err);
-      }
-    }
+    } catch (_) {}
   }
 
   // Read the game name straight off the store page so the backend can skip a lua.tools /details
@@ -769,7 +745,9 @@
     window.Millennium.callServerMethod("luatools", "StartLuaToolsAdd", {
       appid,
       name: getPageGameName(),
-    }).catch(function () {});
+    }).catch(function (e) {
+      backendLog("LuaTools: StartLuaToolsAdd failed for " + appid + ": " + e);
+    });
 
     let finished = false;
     let picking = false;
@@ -874,7 +852,9 @@
             window.Millennium.callServerMethod("luatools", "PickLuaToolsAddSource", {
               appid,
               source: s.name,
-            }).catch(function () {});
+            }).catch(function (e) {
+              backendLog("LuaTools: PickLuaToolsAddSource failed: " + e);
+            });
           };
         }
         list.appendChild(item);
@@ -990,7 +970,9 @@
             }
           }
         })
-        .catch(function () {});
+        .catch(function (e) {
+          backendLog("LuaTools: add-status poll failed for " + appid + ": " + e);
+        });
     }, 350);
     runState.pollTimer = timer;
   }
@@ -1105,109 +1087,10 @@
     },
   };
 
-  // Runtime THEMES map - start with fallback, then hydrate from themes.json/backend.
-  let THEMES = DEFAULT_THEMES;
-  let themesLoaded = false;
-
-  function normalizeThemesPayload(input) {
-    try {
-      let payload = input;
-      if (typeof payload === "string") payload = JSON.parse(payload);
-      if (payload && typeof payload === "object") {
-        if (Array.isArray(payload.themes)) return payload.themes;
-        if (Array.isArray(payload.result)) return payload.result;
-        if (payload.result && Array.isArray(payload.result.themes))
-          return payload.result.themes;
-        if (Array.isArray(payload.value)) return payload.value;
-      }
-      if (Array.isArray(payload)) return payload;
-    } catch (_) {
-      /* ignore */
-    }
-    return [];
-  }
-
-  function _applyBackendThemes(themesArray) {
-    try {
-      const themes = normalizeThemesPayload(themesArray);
-      if (!Array.isArray(themes) || themes.length === 0) return;
-      const map = {};
-      themes.forEach(function (t) {
-        if (!t || (!t.value && !t.key)) return;
-        const key = t.value || t.key;
-        map[key] = Object.assign({}, t, {
-          value: key,
-        });
-      });
-      if (Object.keys(map).length === 0) return;
-      // Merge into existing THEMES if themes have been loaded, otherwise start from DEFAULT_THEMES
-      THEMES = Object.assign({}, themesLoaded ? THEMES : DEFAULT_THEMES, map);
-      themesLoaded = true;
-      try {
-        ensureLuaToolsStyles();
-      } catch (_) {}
-    } catch (e) {
-      console.warn("Failed to apply backend themes", e);
-    }
-  }
-
-  function loadThemesFromFile() {
-    try {
-      return fetch("themes/themes.json", {
-        cache: "no-store",
-      })
-        .then(function (res) {
-          if (!res || !res.ok) return null;
-          return res.json();
-        })
-        .then(function (json) {
-          if (!json) return null;
-          _applyBackendThemes(json);
-          return json;
-        })
-        .catch(function () {
-          return null;
-        });
-    } catch (_) {
-      return Promise.resolve(null);
-    }
-  }
-
-  function loadThemesFromBackend() {
-    if (
-      typeof Millennium === "undefined" ||
-      typeof Millennium.callServerMethod !== "function"
-    ) {
-      return Promise.resolve(null);
-    }
-    return Millennium.callServerMethod("luatools", "GetThemes", {
-      contentScriptQuery: "",
-    })
-      .then(function (res) {
-        try {
-          const payload = typeof res === "string" ? JSON.parse(res) : res;
-          if (payload && payload.success && payload.themes) {
-            _applyBackendThemes(payload.themes);
-            return payload.themes;
-          }
-        } catch (_) {}
-        return null;
-      })
-      .catch(function () {
-        return null;
-      });
-  }
-
-  function loadThemes() {
-    return Promise.all([loadThemesFromFile(), loadThemesFromBackend()]).catch(
-      function () {
-        /* ignore */
-      },
-    );
-  }
-
-  // Trigger load (non-blocking). Keeps DEFAULT_THEMES as a safe fallback.
-  loadThemes();
+  // Runtime THEMES map. DEFAULT_THEMES is the only source under LTSP: the old
+  // themes.json fetch resolved against the Steam store origin (404 every load) and the
+  // GetThemes bridge entry is a local stub that always returns an empty list.
+  const THEMES = DEFAULT_THEMES;
 
   function getCurrentThemeKey() {
     try {
@@ -1278,7 +1161,9 @@
             /* Force overlay backdrops to follow the active theme (overrides inline styles) */
             .luatools-settings-overlay,
             .luatools-overlay,
-            .luatools-loadedapps-overlay {
+            .luatools-loadedapps-overlay,
+            .luatools-alert-overlay,
+            .luatools-confirm-overlay {
                 background: rgba(${theme.rgbString}, 0.12) !important;
                 backdrop-filter: blur(8px) !important;
             }
@@ -1576,26 +1461,25 @@
         const titleIcon = document.createElement("img");
         titleIcon.style.cssText = "width:24px;height:24px;border-radius:4px;";
         titleIcon.alt = "LuaTools";
-        try {
-          Millennium.callServerMethod("luatools", "GetIconDataUrl", {
-            contentScriptQuery: "",
-          }).then(function (res) {
-            try {
-              const p = typeof res === "string" ? JSON.parse(res) : res;
-              titleIcon.src =
-                p && p.success && p.dataUrl
-                  ? p.dataUrl
-                  : "LuaTools/luatools-icon.png";
-            } catch (_) {
-              titleIcon.src = "LuaTools/luatools-icon.png";
-            }
-          });
-        } catch (_) {
-          titleIcon.src = "LuaTools/luatools-icon.png";
-        }
+        // Stay hidden until a src lands. A relative "LuaTools/..." path resolves against
+        // the Steam store origin (404), so the data URL from the bridge is the only source.
+        titleIcon.style.display = "none";
         titleIcon.onerror = function () {
           this.style.display = "none";
         };
+        Millennium.callServerMethod("luatools", "GetIconDataUrl", {
+          contentScriptQuery: "",
+        })
+          .then(function (res) {
+            const p = typeof res === "string" ? JSON.parse(res) : res;
+            if (p && p.success && p.dataUrl) {
+              titleIcon.src = p.dataUrl;
+              titleIcon.style.display = "";
+            }
+          })
+          .catch(function (e) {
+            backendLog("LuaTools: menu icon fetch failed: " + e);
+          });
         const titleText = document.createElement("span");
         titleText.textContent = t("menu.title", "LuaTools · Menu");
         title.appendChild(titleIcon);
@@ -1636,9 +1520,11 @@
         if (window.__LUATOOLS_IS_BIG_PICTURE__) {
           const tip = document.createElement("div");
           tip.style.cssText =
-            "background:rgba(102,192,244,0.15);border-left:3px solid #66c0f4;padding:12px 16px;border-radius:6px;font-size:13px;color:#c7d5e0;margin-bottom:16px;line-height:1.5;";
+            `background:rgba(${colors.rgbString},0.15);border-left:3px solid ${colors.accent};padding:12px 16px;border-radius:6px;font-size:13px;color:${colors.textSecondary};margin-bottom:16px;line-height:1.5;`;
           tip.innerHTML =
-            '<i class="fa-solid fa-info-circle" style="margin-right:8px;color:#66c0f4;"></i>' +
+            '<i class="fa-solid fa-info-circle" style="margin-right:8px;color:' +
+            colors.accent +
+            ';"></i>' +
             t(
               "bigpicture.mouseTip",
               "To use mouse mode in Steam: Guide Button + Right Joystick, click with RB",
@@ -2618,7 +2504,7 @@
       const headerBtn = document.createElement("button");
       headerBtn.type = "button";
       headerBtn.className = "luatools-header-button Focusable";
-      headerBtn.tabIndex = "0";
+      headerBtn.tabIndex = 0;
       headerBtn.title = "LuaTools Settings";
       headerBtn.setAttribute("data-tooltip-text", "LuaTools Settings");
 
@@ -2627,22 +2513,28 @@
       img.style.width = "18px";
       img.style.verticalAlign = "middle";
 
-      img.onerror = function () {
-        // cogwheel fallback
+      // cogwheel fallback
+      function useCogwheelIcon() {
         headerBtn.innerHTML =
           '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="LuaTools"><path fill="currentColor" d="M12 8a4 4 0 100 8 4 4 0 000-8zm9.94 3.06l-2.12-.35a7.962 7.962 0 00-1.02-2.46l1.29-1.72a.75.75 0 00-.09-.97l-1.41-1.41a.75.75 0 00-.97-.09l-1.72 1.29c-.77-.44-1.6-.78-2.46-1.02L13.06 2.06A.75.75 0 0012.31 2h-1.62a.75.75 0 00-.75.65l-.35 2.12a7.962 7.962 0 00-2.46 1.02L5 4.6a.75.75 0 00-.97.09L2.62 6.1a.75.75 0 00-.09.97l1.29 1.72c-.44.77-.78 1.6-1.02 2.46l-2.12.35a.75.75 0 00-.65.75v1.62c0 .37.27.69.63.75l2.14.36c.24.86.58 1.69 1.02 2.46L2.53 18a.75.75 0 00.09.97l1.41 1.41c.26.26.67.29.97.09l1.72-1.29c.77.44 1.6.78 2.46 1.02l.35 2.12c.06.36.38.63.75.63h1.62c.37 0 .69-.27.75-.63l.36-2.14c.86-.24 1.69-.58 2.46-1.02l1.72 1.29c.3.2.71.17.97-.09l1.41-1.41c.26-.26.29-.67.09-.97l-1.29-1.72c.44-.77.78-1.6 1.02-2.46l2.12-.35c.36-.06.63-.38.63-.75v-1.62a.75.75 0 00-.65-.75z"/></svg>';
-      };
+      }
+      img.onerror = useCogwheelIcon;
 
-      img.src = "LuaTools/luatools-icon.png";
-
+      // No relative src — this page's origin is the Steam store, so "LuaTools/..." 404s.
+      // The data URL is the only source; without it, drop straight to the inline cogwheel.
       Millennium.callServerMethod("luatools", "GetIconDataUrl", {})
         .then(function (res) {
           const payload = typeof res === "string" ? JSON.parse(res) : res;
           if (payload && payload.success && payload.dataUrl) {
             img.src = payload.dataUrl;
+          } else {
+            useCogwheelIcon();
           }
         })
-        .catch(function () {});
+        .catch(function (e) {
+          backendLog("LuaTools: header icon fetch failed: " + e);
+          useCogwheelIcon();
+        });
 
       headerBtn.appendChild(img);
 
@@ -3151,21 +3043,20 @@
           const hint = document.createElement("div");
           hint.id = "luatools-gamepad-hint";
           hint.innerHTML = "🎮 " + lt("bigpicture.mouseTip");
+          const hintColors = getThemeColors();
           hint.style.cssText =
-            "\
-                        position: fixed;\
-                        bottom: 20px;\
-                        right: 20px;\
-                        background: rgba(11, 20, 30, 0.9);\
-                        color: #66c0f4;\
-                        padding: 12px 16px;\
-                        border-radius: 8px;\
-                        font-size: 14px;\
-                        z-index: 99998;\
-                        border: 1px solid rgba(102, 192, 244, 0.3);\
-                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);\
-                        animation: fadeInOut 3s ease-in-out;\
-                    ";
+            "position: fixed;" +
+            "bottom: 20px;" +
+            "right: 20px;" +
+            "background: " + hintColors.bgTertiary + ";" +
+            "color: " + hintColors.accent + ";" +
+            "padding: 12px 16px;" +
+            "border-radius: 8px;" +
+            "font-size: 14px;" +
+            "z-index: 99998;" +
+            "border: 1px solid " + hintColors.borderRgba + ";" +
+            "box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);" +
+            "animation: fadeInOut 3s ease-in-out;";
 
           // Add CSS animation if not already present
           if (!document.querySelector("#luatools-gamepad-hint-styles")) {
@@ -3347,9 +3238,7 @@
         setTimeout(bootSettings, 200);
         return;
     }
-    loadThemes().then(function() {
-        return fetchSettingsConfig();
-    }).then(function() {
+    fetchSettingsConfig().then(function() {
         if (typeof ensureLuaToolsStyles === "function") ensureLuaToolsStyles();
     }).catch(function(e) {
         try { backendLog("LuaTools: Boot sequence failed: " + String(e)); } catch(_) {}
@@ -3465,7 +3354,7 @@
     btnRow.style.cssText =
       "margin-top:16px;display:flex;gap:8px;justify-content:space-between;align-items:center;";
     const instructionText = document.createElement("div");
-    instructionText.style.cssText = "font-size:12px;color:#8f98a0;";
+    instructionText.style.cssText = `font-size:12px;color:${getThemeColors().textSecondary};`;
     instructionText.textContent = lt(
       "Left click to install, Right click for SteamDB",
     );

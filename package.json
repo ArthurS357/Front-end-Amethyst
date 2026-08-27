@@ -1,0 +1,13 @@
+{
+  "name": "luatools-ltsp-plugin",
+  "version": "9.0.1",
+  "private": true,
+  "description": "Dev tooling only. The plugin itself ships as public/ + backend/ + plugin.json; nothing here is bundled or emitted.",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "verify": "node --check public/luatools.js && npm run typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

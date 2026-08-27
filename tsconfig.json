@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    // The shipped artifact is public/luatools.js itself — backend/main.lua copies it
+    // byte-for-byte into steamui/webkit and Millennium.add_browser_js loads it raw.
+    // TypeScript is a DEV-ONLY type checker here: noEmit, never a build step.
+    "noEmit": true,
+    "allowJs": true,
+    "checkJs": true,
+    "target": "ES2020",
+    "module": "None",
+    "moduleDetection": "force",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "strict": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["public/**/*.js", "types/**/*.d.ts"]
+}
