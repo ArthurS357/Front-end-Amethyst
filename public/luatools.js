@@ -900,7 +900,7 @@
                 st.installStatus || lt("The game has been added successfully.");
             if (wrap) wrap.style.display = "none";
             const hide = q(".luatools-hide-btn");
-            if (hide) hide.innerHTML = "<span>" + lt("Close") + "</span>";
+            if (hide) setButtonLabel(hide, lt("Close"));
             // Game is added → remove the store-page "Add via LuaTools" button.
             if (anchor && anchor.parentElement)
               anchor.parentElement.removeChild(anchor);
@@ -1288,14 +1288,14 @@
                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
             }
             input:checked + .luatools-slider {
-                background-color: #1a9fff;
-                border-color: #1a9fff;
+                background-color: ${theme.accent};
+                border-color: ${theme.accent};
             }
             input:checked + .luatools-slider:before {
                 transform: translateX(24px);
             }
             .luatools-slider:hover {
-                border-color: #1a9fff;
+                border-color: ${theme.accent};
             }
 
             @keyframes fadeIn {
@@ -1353,6 +1353,64 @@
             button.luatools-header-button svg {
                 height: 16px;
                 width: 16px;
+            }
+
+            /* Keyboard focus. Our overlay controls are <a href="#"> and bare <button>s that
+               Steam's own sheet never reaches, so without this there is no visible focus
+               ring anywhere in the modals. */
+            :is(
+                .luatools-settings-overlay,
+                .luatools-overlay,
+                .luatools-loadedapps-overlay,
+                .luatools-alert-overlay,
+                .luatools-confirm-overlay
+            ) :is(a, button, input, [tabindex]):focus-visible {
+                outline: 2px solid ${theme.accent};
+                outline-offset: 2px;
+                border-radius: 6px;
+            }
+
+            /* Modals are fixed-width (420-560px) with no bound. Cap them so Big Picture and
+               small client windows can't push the action buttons off-screen. */
+            :is(
+                .luatools-settings-overlay,
+                .luatools-overlay,
+                .luatools-loadedapps-overlay,
+                .luatools-alert-overlay,
+                .luatools-confirm-overlay
+            ) > div {
+                max-width: calc(100vw - 48px) !important;
+                max-height: calc(100vh - 48px) !important;
+                overflow-y: auto !important;
+                box-sizing: border-box !important;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                :is(
+                    .luatools-settings-overlay,
+                    .luatools-overlay,
+                    .luatools-loadedapps-overlay,
+                    .luatools-alert-overlay,
+                    .luatools-confirm-overlay,
+                    #luatools-gamepad-hint
+                ),
+                :is(
+                    .luatools-settings-overlay,
+                    .luatools-overlay,
+                    .luatools-loadedapps-overlay,
+                    .luatools-alert-overlay,
+                    .luatools-confirm-overlay
+                ) * {
+                    animation-duration: 0.01ms !important;
+                    animation-iteration-count: 1 !important;
+                    transition-duration: 0.01ms !important;
+                }
+                /* Carve-out: the spinner is the only progress affordance while an add is in
+                   flight — freezing it would read as a hang. */
+                .luatools-status .fa-spinner {
+                    animation-duration: 1.5s !important;
+                    animation-iteration-count: infinite !important;
+                }
             }
         `;
   }
@@ -1420,6 +1478,28 @@
     } catch (err) {
       backendLog("LuaTools: Font Awesome injection failed: " + err);
     }
+  }
+
+  // Overlay controls are markup sandwiches: a Font Awesome <i>, a styled <span>, or both.
+  // Build them as nodes. Assembling that markup as a string means every t()/lt() result is
+  // parsed as HTML — harmless while the bundles are inlined in this file, a live XSS the
+  // day a translation arrives from anywhere else.
+  function ltIcon(iconClass, style) {
+    const i = document.createElement("i");
+    i.className = "fa-solid " + iconClass;
+    if (style) i.style.cssText = style;
+    return i;
+  }
+
+  function ltLabel(text, style) {
+    const span = document.createElement("span");
+    span.textContent = text;
+    if (style) span.style.cssText = style;
+    return span;
+  }
+
+  function setButtonLabel(el, text) {
+    el.replaceChildren(ltLabel(text));
   }
 
   function showSettingsPopup() {
@@ -1494,8 +1574,10 @@
           btn.href = "#";
           const btnColors = getThemeColors();
           btn.style.cssText = `display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(${btnColors.rgbString},0.1);border:1px solid ${btnColors.borderRgba};border-radius:10px;color:${btnColors.accent};font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;`;
-          btn.innerHTML = '<i class="fa-solid ' + iconClass + '"></i>';
+          btn.replaceChildren(ltIcon(iconClass));
           btn.title = t(titleKey, titleFallback);
+          // Icon-only control: the glyph carries no accessible name on its own.
+          btn.setAttribute("aria-label", btn.title);
           btn.onmouseover = function () {
             this.style.background = `rgba(${btnColors.rgbString},0.25)`;
             this.style.transform = "translateY(-2px) scale(1.05)";
@@ -1521,14 +1603,15 @@
           const tip = document.createElement("div");
           tip.style.cssText =
             `background:rgba(${colors.rgbString},0.15);border-left:3px solid ${colors.accent};padding:12px 16px;border-radius:6px;font-size:13px;color:${colors.textSecondary};margin-bottom:16px;line-height:1.5;`;
-          tip.innerHTML =
-            '<i class="fa-solid fa-info-circle" style="margin-right:8px;color:' +
-            colors.accent +
-            ';"></i>' +
-            t(
-              "bigpicture.mouseTip",
-              "To use mouse mode in Steam: Guide Button + Right Joystick, click with RB",
-            );
+          tip.replaceChildren(
+            ltIcon("fa-info-circle", "margin-right:8px;color:" + colors.accent + ";"),
+            document.createTextNode(
+              t(
+                "bigpicture.mouseTip",
+                "To use mouse mode in Steam: Guide Button + Right Joystick, click with RB",
+              ),
+            ),
+          );
           body.appendChild(tip);
         }
 
@@ -1542,18 +1625,15 @@
           btn.href = "#";
           const btnColors = getThemeColors();
           btn.style.cssText = `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;flex:1;background:rgba(${btnColors.rgbString},0.06);border:1px solid ${btnColors.borderRgba};border-radius:12px;color:${btnColors.text};font-size:11px;font-weight:500;text-decoration:none;transition:all 0.2s ease;cursor:pointer;text-align:center;padding:14px 6px;min-width:0;`;
-          const iconHtml = iconClass
-            ? '<i class="fa-solid ' +
-              iconClass +
-              '" style="font-size:22px;color:' +
-              btnColors.accent +
-              ';"></i>'
-            : "";
-          const textSpan =
-            '<span style="text-align:center;line-height:1.3;">' +
-            t(key, fallback) +
-            "</span>";
-          btn.innerHTML = iconHtml + textSpan;
+          btn.replaceChildren();
+          if (iconClass) {
+            btn.appendChild(
+              ltIcon(iconClass, "font-size:22px;color:" + btnColors.accent + ";"),
+            );
+          }
+          btn.appendChild(
+            ltLabel(t(key, fallback), "text-align:center;line-height:1.3;"),
+          );
           btn.onmouseover = function () {
             const c = getThemeColors();
             this.style.background = `rgba(${c.rgbString},0.15)`;
@@ -1598,10 +1678,10 @@
         removeBtn.href = "#";
         const removeBtnColors = getThemeColors();
         removeBtn.style.cssText = `display:none;align-items:center;justify-content:center;gap:8px;padding:10px 16px;background:rgba(${removeBtnColors.rgbString},0.06);border:1px solid ${removeBtnColors.borderRgba};border-radius:10px;color:${removeBtnColors.textSecondary};font-size:13px;font-weight:500;text-decoration:none;transition:all 0.2s ease;cursor:pointer;text-align:center;`;
-        removeBtn.innerHTML =
-          '<i class="fa-solid fa-trash-can" style="font-size:13px;"></i><span>' +
-          t("menu.removeLuaTools", "Remove via LuaTools") +
-          "</span>";
+        removeBtn.replaceChildren(
+          ltIcon("fa-trash-can", "font-size:13px;"),
+          ltLabel(t("menu.removeLuaTools", "Remove via LuaTools")),
+        );
         removeBtn.onmouseover = function () {
           const c = getThemeColors();
           this.style.background = `rgba(${c.rgbString},0.15)`;
@@ -2027,12 +2107,12 @@
     // pre-fill it here — doing so raced with (and clobbered) the clickable rows.
 
     const body = document.createElement("div");
-    body.style.cssText = `display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;line-height:1.4;margin-bottom:12px;color:${colors.textSecondary};`;
+    body.style.cssText = `display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;line-height:1.5;margin-bottom:12px;color:${colors.textSecondary};`;
     body.className = "luatools-status";
-    body.innerHTML =
-      '<i class="fa-solid fa-spinner" style="font-size:14px;animation: spin 1.5s linear infinite;"></i><span>' +
-      lt("Checking availability…") +
-      "</span>";
+    body.replaceChildren(
+      ltIcon("fa-spinner", "font-size:14px;animation: spin 1.5s linear infinite;"),
+      ltLabel(lt("Checking availability…")),
+    );
 
     const progressWrap = document.createElement("div");
     progressWrap.style.cssText = `background:rgba(0,0,0,0.3);height:20px;border-radius:4px;overflow:hidden;position:relative;display:none;border:1px solid ${colors.border};margin-top:12px;`;
@@ -2062,7 +2142,7 @@
     hideBtn.className = "luatools-btn luatools-hide-btn";
     hideBtn.style.cssText =
       "display:flex;align-items:center;justify-content:center;text-align:center;";
-    hideBtn.innerHTML = `<span>${lt("Cancel")}</span>`;
+    setButtonLabel(hideBtn, lt("Cancel"));
     hideBtn.href = "#";
     hideBtn.onclick = function (e) {
       e.preventDefault();
@@ -2246,7 +2326,7 @@
     okBtn.className = "luatools-btn primary";
     okBtn.style.cssText =
       "min-width:140px;display:flex;align-items:center;justify-content:center;text-align:center;";
-    okBtn.innerHTML = `<span>${lt("Close")}</span>`;
+    setButtonLabel(okBtn, lt("Close"));
     okBtn.onclick = function (e) {
       e.preventDefault();
       overlay.remove();
@@ -2336,7 +2416,7 @@
     cancelBtn.className = "luatools-btn";
     cancelBtn.style.cssText =
       "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
-    cancelBtn.innerHTML = `<span>${lt("Cancel")}</span>`;
+    setButtonLabel(cancelBtn, lt("Cancel"));
     cancelBtn.onclick = function (e) {
       e.preventDefault();
       overlay.remove();
@@ -2349,7 +2429,7 @@
     confirmBtn.className = "luatools-btn primary";
     confirmBtn.style.cssText =
       "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
-    confirmBtn.innerHTML = `<span>${lt("Confirm")}</span>`;
+    setButtonLabel(confirmBtn, lt("Confirm"));
     confirmBtn.onclick = function (e) {
       e.preventDefault();
       overlay.remove();
@@ -2465,6 +2545,24 @@
   let lastButtonCheckTime = 0;
   const BUTTON_CHECK_THROTTLE = 500; // Only run once every 500ms
 
+  // Steam's store-header container class is obfuscated and gets regenerated on client
+  // updates, so fall back to the stable ids. Ordered on purpose: a comma-separated
+  // querySelector does NOT try selectors in order — it returns whichever match comes
+  // first in DOCUMENT order — which would let a fallback outrank the real header.
+  const HEADER_CONTAINER_SELECTORS = [
+    "._1wn1lBlAzl3HMRqS1llwie",
+    "#global_actions",
+    "#global_action_menu",
+  ];
+
+  function findHeaderContainer() {
+    for (let i = 0; i < HEADER_CONTAINER_SELECTORS.length; i++) {
+      const el = document.querySelector(HEADER_CONTAINER_SELECTORS[i]);
+      if (el) return el;
+    }
+    return null;
+  }
+
   function addLuaToolsButton(force) {
     // Throttle to prevent blocking gamepad input. Bypassed (force=true) for retry- and
     // observer-driven calls that fire the moment a container appears — those must not be
@@ -2494,7 +2592,7 @@
     }
 
     // Store Header Button Logic (always visible)
-    const headerContainer = document.querySelector("._1wn1lBlAzl3HMRqS1llwie");
+    const headerContainer = findHeaderContainer();
     if (
       headerContainer &&
       !document.querySelector(".luatools-header-button") &&
@@ -2507,13 +2605,15 @@
       headerBtn.tabIndex = 0;
       headerBtn.title = "LuaTools Settings";
       headerBtn.setAttribute("data-tooltip-text", "LuaTools Settings");
+      headerBtn.setAttribute("aria-label", "LuaTools Settings");
 
       const img = document.createElement("img");
       img.style.height = "18px";
       img.style.width = "18px";
       img.style.verticalAlign = "middle";
 
-      // cogwheel fallback
+      // Cogwheel fallback. innerHTML stays here on purpose: the markup is a static SVG
+      // literal with no interpolation, and building it node-by-node needs createElementNS.
       function useCogwheelIcon() {
         headerBtn.innerHTML =
           '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="LuaTools"><path fill="currentColor" d="M12 8a4 4 0 100 8 4 4 0 000-8zm9.94 3.06l-2.12-.35a7.962 7.962 0 00-1.02-2.46l1.29-1.72a.75.75 0 00-.09-.97l-1.41-1.41a.75.75 0 00-.97-.09l-1.72 1.29c-.77-.44-1.6-.78-2.46-1.02L13.06 2.06A.75.75 0 0012.31 2h-1.62a.75.75 0 00-.75.65l-.35 2.12a7.962 7.962 0 00-2.46 1.02L5 4.6a.75.75 0 00-.97.09L2.62 6.1a.75.75 0 00-.09.97l1.29 1.72c-.44.77-.78 1.6-1.02 2.46l-2.12.35a.75.75 0 00-.65.75v1.62c0 .37.27.69.63.75l2.14.36c.24.86.58 1.69 1.02 2.46L2.53 18a.75.75 0 00.09.97l1.41 1.41c.26.26.67.29.97.09l1.72-1.29c.77.44 1.6.78 2.46 1.02l.35 2.12c.06.36.38.63.75.63h1.62c.37 0 .69-.27.75-.63l.36-2.14c.86-.24 1.69-.58 2.46-1.02l1.72 1.29c.3.2.71.17.97-.09l1.41-1.41c.26-.26.29-.67.09-.97l-1.29-1.72c.44-.77.78-1.6 1.02-2.46l2.12-.35c.36-.06.63-.38.63-.75v-1.62a.75.75 0 00-.65-.75z"/></svg>';
@@ -3042,7 +3142,7 @@
         if (window.__LUATOOLS_IS_BIG_PICTURE__) {
           const hint = document.createElement("div");
           hint.id = "luatools-gamepad-hint";
-          hint.innerHTML = "🎮 " + lt("bigpicture.mouseTip");
+          hint.textContent = "🎮 " + lt("bigpicture.mouseTip");
           const hintColors = getThemeColors();
           hint.style.cssText =
             "position: fixed;" +
@@ -3193,7 +3293,7 @@
   );
 
   // SPA navigation detection: the store is single-page-ish, so watch for URL changes
-  // (interval + popstate + pushState/replaceState hooks below) to re-add our buttons. Init
+  // (popstate/hashchange + pushState/replaceState hooks below) to re-add our buttons. Init
   // lastUrl to the current URL so the first check sees "no change" instead of resetting state.
   let lastUrl = window.location.href;
   function checkUrlChange() {
@@ -3216,21 +3316,24 @@
       });
     }
   }
-  // Check URL changes periodically and on popstate
-  // Reduced frequency to avoid blocking gamepad input
-  setInterval(checkUrlChange, 2000); // Changed from 500ms to 2000ms (2 seconds)
   window.addEventListener("popstate", checkUrlChange);
-  // Override pushState/replaceState to detect navigation
-  const originalPushState = history.pushState;
-  const originalReplaceState = history.replaceState;
-  history.pushState = function () {
-    originalPushState.apply(history, arguments);
-    setTimeout(checkUrlChange, 100);
-  };
-  history.replaceState = function () {
-    originalReplaceState.apply(history, arguments);
-    setTimeout(checkUrlChange, 100);
-  };
+  window.addEventListener("hashchange", checkUrlChange);
+  // pushState/replaceState fire no event, so wrap them. Marked so a re-injection of this
+  // file into a live page can't stack a second wrapper on top of the first (each reload
+  // would otherwise add one more checkUrlChange call per navigation, forever).
+  if (!window.__LuaToolsHistoryPatched) {
+    window.__LuaToolsHistoryPatched = true;
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+    history.pushState = function () {
+      originalPushState.apply(history, arguments);
+      setTimeout(checkUrlChange, 100);
+    };
+    history.replaceState = function () {
+      originalReplaceState.apply(history, arguments);
+      setTimeout(checkUrlChange, 100);
+    };
+  }
 
   // Load themes + translations early so the UI is styled and localized from the first paint.
   function bootSettings() {
@@ -3267,7 +3370,7 @@
           !document.querySelector(".luatools-button") &&
           window.__LuaToolsGameAdded !== true;
         var needHeaderBtn =
-          !!document.querySelector("._1wn1lBlAzl3HMRqS1llwie") &&
+          !!findHeaderContainer() &&
           !document.querySelector(".luatools-header-button");
         if (needGameBtn || needHeaderBtn) {
           updateButtonTranslations();
@@ -3360,7 +3463,7 @@
     );
     const dismissBtn = document.createElement("a");
     dismissBtn.className = "luatools-btn";
-    dismissBtn.innerHTML = "<span>" + lt("Dismiss") + "</span>";
+    setButtonLabel(dismissBtn, lt("Dismiss"));
     dismissBtn.href = "#";
     dismissBtn.onclick = function (e) {
       e.preventDefault();

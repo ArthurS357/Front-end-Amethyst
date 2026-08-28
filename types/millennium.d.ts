@@ -61,6 +61,9 @@ interface Window {
   __LuaToolsInjected?: boolean;
   __LuaToolsReady?: boolean;
   __LuaToolsLastUrl?: string;
+  /** Set once the pushState/replaceState wrappers are installed, so a re-injection
+   *  of luatools.js into a live page can't stack a second layer of wrappers. */
+  __LuaToolsHistoryPatched?: boolean;
   __LuaToolsOrderObserver?: MutationObserver | null;
   __LuaToolsOrderObservedEl?: Element | null;
   __LuaToolsPresenceCheckInFlight?: boolean;
