@@ -2,7 +2,7 @@
 
 Fork do plugin frontend injetado na Steam Store, parte do ecossistema **LuaTools Amethyst**. Este repositório entrega apenas a camada frontend/backend-relay do plugin (`public/` + `backend/` + `plugin.json`); o app desktop LuaTools é o backend real.
 
-**Versão do fork:** `v1.1.0` (tags Git — veja [Bump de versão](#bump-de-versão)).
+**Versão do fork:** `v1.2.0` (tags Git — veja [Bump de versão](#bump-de-versão)).
 
 ## Estado atual
 
@@ -10,6 +10,7 @@ Funcional sob **Millennium** (injeção `add_browser_js`/`add_browser_css`) e so
 
 Principais correções e melhorias aplicadas nos últimos commits:
 
+- **Visual Amethyst:** paleta azul-Steam do tema `original` substituída por violeta/lavanda de ametista (sem mudança de layout, espaçamento ou lógica). Backdrop dos overlays corrigido (véu violeta com blur) e contraste WCAG validado (pior caso de texto 4.81:1, pior caso de UI 3.52:1).
 - Detecção de SPA (mudança de rota sem reload) corrigida.
 - Fallback de âncora de cabeçalho quando o alvo original não está presente no DOM.
 - Labels construídos via DOM em vez de innerHTML (evita XSS e melhora a11y).
@@ -81,6 +82,7 @@ O `plugin.json` mantém o `version` herdado do LuaTools upstream (`9.0.1`) e nã
 
 - `v1.0.0` — commit inicial do fork.
 - `v1.1.0` — melhorias visuais e correções listadas em [Estado atual](#estado-atual).
+- `v1.2.0` — visual Amethyst (roxo suave) aplicado ao tema padrão.
 
 ## Licença
 
