@@ -11,10 +11,10 @@
   gamepadCSS.id = "gamepad-navigation-styles";
   gamepadCSS.textContent = `
         .active-focus {
-            outline: 3px solid #66c0f4 !important;
+            outline: 3px solid var(--lt-accent, #a78bfa) !important;
             outline-offset: 2px !important;
-            box-shadow: 0 0 0 4px rgba(102, 192, 244, 0.3),
-                        0 0 12px rgba(102, 192, 244, 0.5) !important;
+            box-shadow: 0 0 0 4px rgba(var(--lt-rgb, 167, 139, 250),0.3),
+                        0 0 12px rgba(var(--lt-rgb, 167, 139, 250),0.5) !important;
             position: relative !important;
             z-index: 9999 !important;
             transition: outline 0.15s ease, box-shadow 0.15s ease !important;
@@ -22,12 +22,12 @@
 
         @keyframes gamepad-focus-pulse {
             0%, 100% {
-                box-shadow: 0 0 0 4px rgba(102, 192, 244, 0.3),
-                            0 0 12px rgba(102, 192, 244, 0.5);
+                box-shadow: 0 0 0 4px rgba(var(--lt-rgb, 167, 139, 250),0.3),
+                            0 0 12px rgba(var(--lt-rgb, 167, 139, 250),0.5);
             }
             50% {
-                box-shadow: 0 0 0 4px rgba(102, 192, 244, 0.5),
-                            0 0 16px rgba(102, 192, 244, 0.7);
+                box-shadow: 0 0 0 4px rgba(var(--lt-rgb, 167, 139, 250),0.5),
+                            0 0 16px rgba(var(--lt-rgb, 167, 139, 250),0.7);
             }
         }
 
@@ -39,7 +39,7 @@
 
         button.active-focus,
         a.active-focus {
-            background-color: rgba(102, 192, 244, 0.15) !important;
+            background-color: rgba(var(--lt-rgb, 167, 139, 250),0.15) !important;
             transform: scale(1.02);
         }
 
@@ -52,12 +52,12 @@
         input.active-focus,
         select.active-focus,
         textarea.active-focus {
-            border-color: #66c0f4 !important;
-            background-color: rgba(102, 192, 244, 0.1) !important;
+            border-color: var(--lt-accent, #a78bfa) !important;
+            background-color: rgba(var(--lt-rgb, 167, 139, 250),0.1) !important;
         }
 
         .active-focus:focus {
-            outline: 3px solid #66c0f4 !important;
+            outline: 3px solid var(--lt-accent, #a78bfa) !important;
         }
 
         button,
@@ -72,11 +72,11 @@
         .luatools-button.active-focus,
         .luatools-restart-button.active-focus {
             transform: scale(1.05) !important;
-            background: linear-gradient(135deg, rgba(102, 192, 244, 0.3), rgba(102, 192, 244, 0.2)) !important;
+            background: linear-gradient(135deg, rgba(var(--lt-rgb, 167, 139, 250),0.3), rgba(var(--lt-rgb, 167, 139, 250),0.2)) !important;
         }
 
         .btnv6_blue_hoverfade.active-focus {
-            background: linear-gradient(to right, #47bfff 5%, #1a9fff 95%) !important;
+            background: linear-gradient(to right, var(--lt-accent-light, #c4b5fd) 5%, var(--lt-accent, #a78bfa) 95%) !important;
         }
 
         .active-focus {
@@ -1068,22 +1068,26 @@
 
   // Theme definitions (pulled from themes.json; inline only used as fallback)
   const DEFAULT_THEMES = {
+    // Amethyst: soft violet/lavender accents on a purple-tinted near-black.
+    // Alpha literals ("0.3"/"0.4"/"0.8") are load-bearing — getThemeColors() and
+    // generateThemeStyles() derive variants via String.replace on them.
     original: {
-      bgPrimary: "#1b2838",
-      bgSecondary: "#2a475e",
-      bgTertiary: "rgba(44, 79, 112, 0.86)",
-      bgHover: "rgba(68, 112, 153, 0.86)",
-      bgContainer: "rgba(40, 74, 102, 0.6)",
-      accent: "#66c0f4",
-      accentLight: "#a4d7f5",
-      border: "rgba(102,192,244,0.3)",
-      borderHover: "rgba(102,192,244,0.8)",
-      text: "#fff",
-      textSecondary: "#c7d5e0",
-      gradient: "linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%)",
-      gradientLight: "linear-gradient(135deg, #a4d7f5 0%, #7dd4ff 100%)",
-      shadow: "rgba(102,192,244,0.4)",
-      shadowHover: "rgba(102,192,244,0.6)",
+      bgPrimary: "#1a1626",
+      bgSecondary: "#2a2438",
+      bgTertiary: "rgba(50, 42, 68, 0.86)",
+      bgHover: "rgba(66, 56, 90, 0.86)",
+      bgContainer: "rgba(42, 36, 56, 0.6)",
+      accent: "#a78bfa",
+      accentLight: "#c4b5fd",
+      accentDark: "#7c3aed",
+      border: "rgba(167,139,250,0.3)",
+      borderHover: "rgba(167,139,250,0.8)",
+      text: "#f1f5f9",
+      textSecondary: "#cbd5e1",
+      gradient: "linear-gradient(135deg, #a78bfa 0%, #c4b5fd 100%)",
+      gradientLight: "linear-gradient(135deg, #c4b5fd 0%, #ddd6fe 100%)",
+      shadow: "rgba(167,139,250,0.4)",
+      shadowHover: "rgba(167,139,250,0.6)",
     },
   };
 
@@ -1130,7 +1134,7 @@
           parseInt(result[2], 16),
           parseInt(result[3], 16),
         ]
-      : [102, 192, 244];
+      : [167, 139, 250];
   }
 
   function getThemeColors() {
@@ -1157,14 +1161,25 @@
   }
 
   function generateThemeStyles(theme) {
+    // Callers pass the raw THEMES entry, which has no rgbString (that key only exists on
+    // getThemeColors()) — derive it here so the backdrop rule is valid CSS.
+    const rgbString = hexToRgb(theme.accent).join(", ");
     return `
+            /* Accent tokens for sheets injected outside this function (gamepad nav CSS).
+               Theme CSS files declare the same names; this block is appended later so it wins. */
+            :root {
+                --lt-accent: ${theme.accent};
+                --lt-accent-light: ${theme.accentLight};
+                --lt-rgb: ${rgbString};
+            }
+
             /* Force overlay backdrops to follow the active theme (overrides inline styles) */
             .luatools-settings-overlay,
             .luatools-overlay,
             .luatools-loadedapps-overlay,
             .luatools-alert-overlay,
             .luatools-confirm-overlay {
-                background: rgba(${theme.rgbString}, 0.12) !important;
+                background: rgba(${rgbString}, 0.12) !important;
                 backdrop-filter: blur(8px) !important;
             }
 
@@ -1189,7 +1204,8 @@
             .luatools-overlay select option:checked,
             .luatools-loadedapps-overlay select option:checked {
                 background: ${theme.accent} !important;
-                color: ${theme.text} !important;
+                /* Light accent fill — theme.text on it is ~2.7:1, bgPrimary is ~6.5:1. */
+                color: ${theme.bgPrimary} !important;
             }
             .luatools-settings-overlay select:hover,
             .luatools-overlay select:hover,
@@ -1223,18 +1239,32 @@
                 box-shadow: 0 6px 20px ${theme.shadowHover};
                 border-color: ${theme.borderHover};
             }
+            .luatools-btn:active:not([data-disabled="1"]) {
+                transform: translateY(0) scale(0.99);
+                box-shadow: 0 1px 4px ${theme.shadow};
+                border-color: ${theme.accent};
+            }
             .luatools-btn.primary {
                 background: ${theme.gradient};
                 border-color: ${theme.borderHover.replace("0.8", "0.8")};
-                color: ${theme.text};
+                /* Same reason as select option:checked — dark ink on the light violet fill. */
+                color: ${theme.bgPrimary};
                 font-weight: 700;
                 box-shadow: 0 4px 15px ${theme.shadow}, inset 0 1px 0 rgba(255,255,255,0.3);
-                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+                text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
             }
             .luatools-btn.primary:hover:not([data-disabled="1"]) {
                 background: ${theme.gradientLight};
                 transform: translateY(-3px) scale(1.03);
-                box-shadow: 0 8px 25px rgba(26, 159, 255, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+                box-shadow: 0 8px 25px ${theme.shadowHover}, inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            }
+            .luatools-btn.primary:active:not([data-disabled="1"]) {
+                /* Pressed inverts the fill: deep violet, so the ink flips back to theme.text. */
+                background: ${theme.accentDark || theme.accent};
+                color: ${theme.text};
+                text-shadow: none;
+                transform: translateY(0) scale(0.99);
+                box-shadow: 0 1px 4px ${theme.shadow};
             }
 
             /* Modern Toggle Switch */
