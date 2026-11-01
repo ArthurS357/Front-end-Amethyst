@@ -3,8 +3,16 @@
 // ============================================
 // GAMEPAD NAVIGATION SYSTEM - Inline Version
 // ============================================
-(function () {
+(function gamepadNavigationSystem() {
   "use strict";
+
+  // Steam pode avaliar este script antes de <head> existir em páginas pesadas.
+  // Sem esta guarda, o appendChild abaixo lança e aborta o ARQUIVO INTEIRO,
+  // impedindo a segunda IIFE (que cria o ícone do header) de rodar.
+  if (!document.head) {
+    document.addEventListener("DOMContentLoaded", gamepadNavigationSystem, { once: true });
+    return;
+  }
 
   // Inject gamepad navigation CSS
   const gamepadCSS = document.createElement("style");
@@ -505,8 +513,13 @@
 // ============================================
 // LUATOOLS MAIN CODE
 // ============================================
-(function () {
+(function luaToolsMain() {
   "use strict";
+
+  if (!document.head || !document.body) {
+    document.addEventListener("DOMContentLoaded", luaToolsMain, { once: true });
+    return;
+  }
 
   // Guard against re-injection into a still-alive JS context. CefInjectorService (LuaLoader mode)
   // re-injects this whole script whenever window.__LuaToolsReady isn't true yet — which can happen
@@ -2580,6 +2593,9 @@
   // querySelector does NOT try selectors in order — it returns whichever match comes
   // first in DOCUMENT order — which would let a fallback outrank the real header.
   const HEADER_CONTAINER_SELECTORS = [
+    ".rQfSdlfLw8O-",
+    'div.Panel.Focusable[aria-label] > div:has(a.Focusable[href*="/wishlist"])',
+    'div.Panel.Focusable[aria-label] > div:has(a.Focusable[href*="/cart"])',
     "._1wn1lBlAzl3HMRqS1llwie",
     "#global_actions",
     "#global_action_menu",
@@ -2587,8 +2603,10 @@
 
   function findHeaderContainer() {
     for (let i = 0; i < HEADER_CONTAINER_SELECTORS.length; i++) {
-      const el = document.querySelector(HEADER_CONTAINER_SELECTORS[i]);
-      if (el) return el;
+      try {
+        const el = document.querySelector(HEADER_CONTAINER_SELECTORS[i]);
+        if (el) return el;
+      } catch (_) {}
     }
     return null;
   }
@@ -2625,8 +2643,7 @@
     const headerContainer = findHeaderContainer();
     if (
       headerContainer &&
-      !document.querySelector(".luatools-header-button") &&
-      !window.__LuaToolsHeaderInserted
+      !document.querySelector(".luatools-header-button")
     ) {
       ensureLuaToolsStyles();
       const headerBtn = document.createElement("button");
@@ -3128,9 +3145,10 @@
     // the in-flight presence check (button then never resolves). Instead, the game button is
     // handled independently by the MutationObserver below, which reliably fires when the
     // button row appears — decoupled from the ready/injection signal.
+    // Ready signals script initialized; in-page observer handles late React header mounts.
+    window.__LuaToolsReady = true;
     var headerReady = !!document.querySelector(".luatools-header-button");
     if (headerReady || attempt >= 12) {
-      window.__LuaToolsReady = true;
       return;
     }
     setTimeout(function () {
@@ -3409,7 +3427,7 @@
       }, 300);
     });
 
-    observer.observe(document.body, {
+    observer.observe(document.documentElement, {
       childList: true,
       subtree: true,
     });

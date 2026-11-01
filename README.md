@@ -2,7 +2,7 @@
 
 Fork do plugin frontend injetado na Steam Store, parte do ecossistema **LuaTools Amethyst**. Este repositório entrega apenas a camada frontend/backend-relay do plugin (`public/` + `backend/` + `plugin.json`); o app desktop LuaTools é o backend real.
 
-**Versão do fork:** `v1.2.0` (tags Git — veja [Bump de versão](#bump-de-versão)).
+**Versão do fork:** `v1.2.1` (tags Git — veja [Bump de versão](#bump-de-versão)).
 
 ## Estado atual
 
@@ -10,6 +10,7 @@ Funcional sob **Millennium** (injeção `add_browser_js`/`add_browser_css`) e so
 
 Principais correções e melhorias aplicadas nos últimos commits:
 
+- **Resiliência do Header na Store Home (Steam 01/11/2026):** suporte ao novo container React `v7menu` (`.rQfSdlfLw8O-` e fallbacks estruturais via `[href*="/wishlist"]`/`[href*="/cart"]`), guarda de DOM precoce (`document.head`/`document.body`) nas IIFEs e desacoplamento do `window.__LuaToolsReady`.
 - **Visual Amethyst:** paleta azul-Steam do tema `original` substituída por violeta/lavanda de ametista (sem mudança de layout, espaçamento ou lógica). Backdrop dos overlays corrigido (véu violeta com blur) e contraste WCAG validado (pior caso de texto 4.81:1, pior caso de UI 3.52:1).
 - Detecção de SPA (mudança de rota sem reload) corrigida.
 - Fallback de âncora de cabeçalho quando o alvo original não está presente no DOM.
@@ -83,6 +84,7 @@ O `plugin.json` mantém o `version` herdado do LuaTools upstream (`9.0.1`) e nã
 - `v1.0.0` — commit inicial do fork.
 - `v1.1.0` — melhorias visuais e correções listadas em [Estado atual](#estado-atual).
 - `v1.2.0` — visual Amethyst (roxo suave) aplicado ao tema padrão.
+- `v1.2.1` — restaura ícone do header na Store Home após atualização da Steam (novo seletor React `v7menu` e guardas de DOM).
 
 ## Licença
 
