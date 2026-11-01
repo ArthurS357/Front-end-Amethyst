@@ -2,7 +2,7 @@
 
 Fork do plugin frontend injetado na Steam Store, parte do ecossistema **LuaTools Amethyst**. Este repositório entrega apenas a camada frontend/backend-relay do plugin (`public/` + `backend/` + `plugin.json`); o app desktop LuaTools é o backend real.
 
-**Versão do fork:** `v1.2.1` (tags Git — veja [Bump de versão](#bump-de-versão)).
+**Versão do fork:** `v1.3.0` (tags Git — veja [Bump de versão](#bump-de-versão)).
 
 ## Estado atual
 
@@ -10,6 +10,7 @@ Funcional sob **Millennium** (injeção `add_browser_js`/`add_browser_css`) e so
 
 Principais correções e melhorias aplicadas nos últimos commits:
 
+- **Overhaul de UI/UX (`v1.3.0`):** Design System Amethyst centralizado (`LT_DESIGN` e variáveis `--lt-*` em `:root`), modais responsivos e centralizados (`.lt-modal` com glassmorphism `backdrop-filter: blur()`, `max-width` seguro e `overflow-y: auto`), substituição integral do FontAwesome CDN por 14 ícones SVG inline (`getSvgIcon`), remoção do `<link>` quebrado para `themes/original.css`, micro-interações suaves com suporte a `prefers-reduced-motion` e acessibilidade reforçada (`:focus-visible`, `role="dialog"`, `aria-live` e suporte a teclado/gamepad na lista de fontes).
 - **Resiliência do Header na Store Home (Steam 01/11/2026):** suporte ao novo container React `v7menu` (`.rQfSdlfLw8O-` e fallbacks estruturais via `[href*="/wishlist"]`/`[href*="/cart"]`), guarda de DOM precoce (`document.head`/`document.body`) nas IIFEs e desacoplamento do `window.__LuaToolsReady`.
 - **Visual Amethyst:** paleta azul-Steam do tema `original` substituída por violeta/lavanda de ametista (sem mudança de layout, espaçamento ou lógica). Backdrop dos overlays corrigido (véu violeta com blur) e contraste WCAG validado (pior caso de texto 4.81:1, pior caso de UI 3.52:1).
 - Detecção de SPA (mudança de rota sem reload) corrigida.
@@ -22,9 +23,8 @@ Principais correções e melhorias aplicadas nos últimos commits:
 
 - **Handlers Lua ausentes:** `luatools.js` chama `OpenExternalUrl` e `CheckForUpdatesNow` via `Millennium.callServerMethod`, mas [`backend/main.lua`](backend/main.lua) não define essas funções globais. O botão do Discord e a checagem manual de updates falham silenciosamente.
 - **Sistema de temas inerte:** `public/themes/themes.json` define 11 temas, mas apenas `original` é aplicado no modo LTSP — os outros 10 estão presentes no bundle sem forma conhecida de serem selecionados.
-- **FontAwesome via CDN:** `luatools.js` carrega `cdnjs.cloudflare.com/.../font-awesome/...` em runtime (`ensureFontAwesome()`). Sem rede, os ícones somem.
 - **Assets possivelmente mortos:** `public/themes/`, `public/luatools-icon.png` e `public/steamdb-webkit.css` aguardam confirmação de uso real no modo LuaLoader antes de serem removidos.
-- **85 erros `TS2339`** no typecheck — backlog de tipagem (o bundle é JS puro checado via `// @ts-check`; `types/millennium.d.ts` ainda não cobre toda a API). Sem impacto em runtime.
+- **56 erros `TS2339`** no typecheck — backlog de tipagem (o bundle é JS puro checado via `// @ts-check`; `types/millennium.d.ts` ainda não cobre toda a API). Sem impacto em runtime.
 
 ## Estrutura do repositório
 
@@ -73,7 +73,7 @@ Copie `public/luatools.js` (e `steamdb-webkit.css`, se alterado) diretamente par
 
 ```bash
 node --check public/luatools.js        # sintaxe JS
-npx tsc --noEmit -p tsconfig.json       # typecheck (85 erros TS2339 conhecidos, ver Pendências)
+npx tsc --noEmit -p tsconfig.json       # typecheck (56 erros TS2339 conhecidos, ver Pendências)
 npm run verify                          # roda os dois acima em sequência
 ```
 
@@ -85,6 +85,7 @@ O `plugin.json` mantém o `version` herdado do LuaTools upstream (`9.0.1`) e nã
 - `v1.1.0` — melhorias visuais e correções listadas em [Estado atual](#estado-atual).
 - `v1.2.0` — visual Amethyst (roxo suave) aplicado ao tema padrão.
 - `v1.2.1` — restaura ícone do header na Store Home após atualização da Steam (novo seletor React `v7menu` e guardas de DOM).
+- `v1.3.0` — overhaul de UI/UX (glassmorphism, Design System Amethyst, SVGs inline sem CDN externo, responsividade e acessibilidade).
 
 ## Licença
 

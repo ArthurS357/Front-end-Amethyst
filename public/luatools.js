@@ -43,12 +43,19 @@
             .active-focus {
                 animation: gamepad-focus-pulse 1.5s ease-in-out infinite;
             }
+            button.active-focus,
+            a.active-focus {
+                transform: scale(1.02);
+            }
+            .luatools-button.active-focus,
+            .luatools-restart-button.active-focus {
+                transform: scale(1.04) !important;
+            }
         }
 
         button.active-focus,
         a.active-focus {
             background-color: rgba(var(--lt-rgb, 167, 139, 250),0.15) !important;
-            transform: scale(1.02);
         }
 
         .BasicUI .active-focus,
@@ -74,12 +81,11 @@
         select,
         textarea,
         .focusable {
-            transition: transform 0.15s ease, background-color 0.15s ease !important;
+            transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
         }
 
         .luatools-button.active-focus,
         .luatools-restart-button.active-focus {
-            transform: scale(1.05) !important;
             background: linear-gradient(135deg, rgba(var(--lt-rgb, 167, 139, 250),0.3), rgba(var(--lt-rgb, 167, 139, 250),0.2)) !important;
         }
 
@@ -796,51 +802,37 @@
       if (key === renderKey) return; // avoid flicker / click-eating
       renderKey = key;
       list.innerHTML = "";
+      let hasClickable = false;
       sources.forEach(function (s) {
         const item = document.createElement("div");
-        item.className = "luatools-api-item";
+        item.className =
+          "luatools-api-item" + (s.downloading ? " is-downloading" : "");
         item.setAttribute("data-api-name", s.name);
-        item.style.cssText =
-          "display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin-bottom:8px;background:rgba(" +
-          colors.rgbString +
-          ",0.1);border:1px solid " +
-          colors.borderRgba +
-          ";border-radius:6px;transition:all 0.15s;";
         const left = document.createElement("div");
-        left.style.cssText =
-          "font-size:14px;color:" +
-          colors.textSecondary +
-          ";font-weight:500;";
+        left.className = "lt-api-name";
         left.textContent = s.displayName || s.name;
         const right = document.createElement("div");
-        right.style.cssText =
-          "font-size:13px;display:flex;align-items:center;gap:6px;";
+        right.className = "lt-api-badge";
         // Status → icon + colour, so found/not-found/needs-key/downloading read at a glance.
         let badge, icon, statusColor;
         if (s.downloading) {
           badge = lt("Downloading…");
-          icon = "fa-solid fa-spinner";
-          statusColor = colors.accent;
+          icon = "spinner";
+          statusColor = colors.accentLight;
         } else if (s.needsKey && s.locked) {
           badge = lt("Needs key");
-          icon = "fa-solid fa-lock";
-          statusColor = "#ffc107"; // amber
+          icon = "lock";
+          statusColor = LT_DESIGN.status.warning;
         } else if (!s.available) {
           badge = lt("Not found");
-          icon = "fa-solid fa-circle-xmark";
-          statusColor = "#ff6b6b"; // muted red
+          icon = "error";
+          statusColor = LT_DESIGN.status.danger;
         } else {
           badge = lt("Available");
-          icon = "fa-solid fa-circle-check";
-          statusColor = "#5cb85c"; // green
+          icon = "check";
+          statusColor = LT_DESIGN.status.success;
         }
-        const statusIcon = document.createElement("i");
-        statusIcon.className = icon;
-        statusIcon.style.cssText =
-          "font-size:13px;color:" +
-          statusColor +
-          ";" +
-          (s.downloading ? "animation: spin 1.5s linear infinite;" : "");
+        const statusIcon = ltIcon(icon, "color:" + statusColor + ";", 15);
         const statusText = document.createElement("span");
         statusText.style.color = statusColor;
         statusText.textContent = badge + (s.stats ? " (" + s.stats + ")" : "");
@@ -849,14 +841,11 @@
         item.appendChild(left);
         item.appendChild(right);
         if (clickable && s.canDownload && !s.downloading) {
-          item.style.cursor = "pointer";
-          item.onmouseover = function () {
-            item.style.borderColor = colors.accent;
-          };
-          item.onmouseout = function () {
-            item.style.borderColor = colors.borderRgba;
-          };
-          item.onclick = function () {
+          hasClickable = true;
+          item.classList.add("is-clickable");
+          item.tabIndex = 0;
+          item.setAttribute("role", "button");
+          const pickSource = function () {
             if (picking) return;
             picking = true;
             renderKey = "";
@@ -869,9 +858,19 @@
               backendLog("LuaTools: PickLuaToolsAddSource failed: " + e);
             });
           };
+          item.onclick = pickSource;
+          item.onkeydown = function (e) {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pickSource();
+            }
+          };
         }
         list.appendChild(item);
       });
+      if (hasClickable && window.GamepadNav) {
+        window.GamepadNav.scanElements();
+      }
     };
 
     // This setInterval only self-clears on SUCCESS. A cancelled or errored add would otherwise leak it
@@ -901,19 +900,31 @@
           const bar = q(".luatools-progress-bar");
           const percent = q(".luatools-percent");
 
+          const setTitle = function (iconName, iconColor, text) {
+            if (titleEl) {
+              titleEl.replaceChildren(
+                ltIcon(iconName, "color:" + iconColor + ";", 20),
+                ltLabel(text),
+              );
+            }
+          };
+
           if (st.installed || st.installStatus) {
             finished = true;
             clearInterval(timer);
             runState.pollTimer = null;
             runState.inProgress = false;
             runState.appid = null;
-            if (titleEl) titleEl.textContent = lt("Game Added!");
+            setTitle("check", LT_DESIGN.status.success, lt("Game Added!"));
             if (statusEl)
               statusEl.textContent =
                 st.installStatus || lt("The game has been added successfully.");
             if (wrap) wrap.style.display = "none";
             const hide = q(".luatools-hide-btn");
-            if (hide) setButtonLabel(hide, lt("Close"));
+            if (hide) {
+              hide.classList.add("primary");
+              setButtonLabel(hide, lt("Close"));
+            }
             // Game is added → remove the store-page "Add via LuaTools" button.
             if (anchor && anchor.parentElement)
               anchor.parentElement.removeChild(anchor);
@@ -954,8 +965,8 @@
             return s.downloading;
           })[0];
           if (dl) {
-            if (st.fastFetch && titleEl && !st.installed && !st.installStatus)
-              titleEl.textContent = lt("Downloading…");
+            if (st.fastFetch && !st.installed && !st.installStatus)
+              setTitle("download", getThemeColors().accent, lt("Downloading…"));
             if (statusEl)
               statusEl.textContent = lt("Downloading from {api}…").replace(
                 "{api}",
@@ -972,8 +983,8 @@
           }
           if (st.sourcesLoaded && st.sources && st.sources.length) {
             if (st.fastFetch) {
-              if (titleEl && !st.installed && !st.installStatus)
-                titleEl.textContent = lt("Downloading…");
+              if (!st.installed && !st.installStatus)
+                setTitle("download", getThemeColors().accent, lt("Downloading…"));
               if (statusEl) statusEl.textContent = lt("Starting download…");
               renderSources(st.sources, false);
             } else {
@@ -1079,6 +1090,60 @@
     window.__LuaToolsI18n = stored;
   }
 
+  // Design System tokens — single source of truth for radii, spacing, blur, motion, and status palette.
+  const LT_DESIGN = Object.freeze({
+    radius: Object.freeze({ sm: "8px", md: "10px", lg: "14px", xl: "18px", pill: "9999px" }),
+    space: Object.freeze({ xs: "6px", sm: "10px", md: "16px", lg: "24px", xl: "28px" }),
+    blur: Object.freeze({ backdrop: "10px", surface: "16px", pill: "6px" }),
+    transition: "0.2s cubic-bezier(0.22, 1, 0.36, 1)",
+    status: Object.freeze({
+      success: "#4ade80",
+      warning: "#fbbf24",
+      danger: "#f87171",
+      orange: "#fb923c",
+    }),
+  });
+
+  // Inline 24x24 SVG icon paths — eliminates external FontAwesome CDN dependency.
+  const SVG_ICONS = Object.freeze({
+    settings:
+      '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+    close: '<path d="M18 6 6 18M6 6l12 12"/>',
+    add: '<path d="M12 5v14M5 12h14"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+    download:
+      '<path d="M12 13v8m0 0-3.5-3.5M12 21l3.5-3.5"/><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/>',
+    wrench:
+      '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+    trash:
+      '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14zM10 11v6M14 11v6"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+    question:
+      '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/>',
+    spinner: '<path d="M21 12a9 9 0 1 1-6.22-8.56"/>',
+    lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+    check: '<circle cx="12" cy="12" r="10"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>',
+    error: '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>',
+    discord:
+      '<path fill="currentColor" stroke="none" d="M19.27 5.33C17.94 4.71 16.5 4.26 15 4a.09.09 0 0 0-.07.03c-.18.33-.39.76-.53 1.09a16.09 16.09 0 0 0-4.8 0c-.14-.34-.35-.76-.54-1.09-.01-.02-.04-.03-.07-.03-1.5.26-2.93.71-4.27 1.33-.01 0-.02.01-.03.02-2.72 4.07-3.47 8.03-3.1 11.95 0 .02.01.04.03.05 1.8 1.32 3.53 2.12 5.24 2.65.03.01.06 0 .07-.02.4-.55.76-1.13 1.07-1.74.02-.04 0-.08-.04-.09-.57-.22-1.11-.48-1.64-.78-.04-.02-.04-.08-.01-.11.11-.08.22-.17.33-.25.02-.02.05-.02.07-.01 3.44 1.57 7.15 1.57 10.55 0 .02-.01.05-.01.07.01.11.09.22.17.33.26.04.03.04.09-.01.11-.52.31-1.07.56-1.64.78-.04.01-.05.06-.04.09.32.61.68 1.19 1.07 1.74.03.01.06.02.09.01 1.72-.53 3.45-1.33 5.25-2.65.02-.01.03-.03.03-.05.44-4.53-.73-8.46-3.1-11.95-.01-.01-.02-.02-.04-.02zM8.52 14.91c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12 0 1.17-.84 2.12-1.89 2.12zm6.97 0c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12 0 1.17-.83 2.12-1.89 2.12z"/>',
+  });
+
+  function getSvgIcon(name, size) {
+    const s = Number(size) || 18;
+    const body = Object.prototype.hasOwnProperty.call(SVG_ICONS, name)
+      ? SVG_ICONS[name]
+      : SVG_ICONS.info;
+    return (
+      '<svg width="' +
+      s +
+      '" height="' +
+      s +
+      '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+      body +
+      "</svg>"
+    );
+  }
+
   // Theme definitions (pulled from themes.json; inline only used as fallback)
   const DEFAULT_THEMES = {
     // Amethyst: soft violet/lavender accents on a purple-tinted near-black.
@@ -1154,7 +1219,7 @@
     const theme = getCurrentTheme();
     const rgb = hexToRgb(theme.accent);
     return {
-      modalBg: `linear-gradient(135deg, ${theme.bgPrimary} 0%, ${theme.bgSecondary} 100%)`,
+      modalBg: `linear-gradient(155deg, ${theme.bgSecondary} 0%, ${theme.bgPrimary} 100%)`,
       border: theme.accent,
       borderRgba: theme.border,
       text: theme.text,
@@ -1174,38 +1239,404 @@
   }
 
   function generateThemeStyles(theme) {
-    // Callers pass the raw THEMES entry, which has no rgbString (that key only exists on
-    // getThemeColors()) — derive it here so the backdrop rule is valid CSS.
     const rgbString = hexToRgb(theme.accent).join(", ");
+    const ds = LT_DESIGN;
     return `
-            /* Accent tokens for sheets injected outside this function (gamepad nav CSS).
-               Theme CSS files declare the same names; this block is appended later so it wins. */
+            /* Full Design System & theme tokens (--lt-*) published on :root so all UI surfaces
+               and gamepad navigation share one cohesive palette without external CSS fetches. */
             :root {
+                --lt-bg-primary: ${theme.bgPrimary};
+                --lt-bg-secondary: ${theme.bgSecondary};
+                --lt-bg-tertiary: ${theme.bgTertiary};
+                --lt-bg-hover: ${theme.bgHover};
+                --lt-bg-container: ${theme.bgContainer};
                 --lt-accent: ${theme.accent};
                 --lt-accent-light: ${theme.accentLight};
+                --lt-accent-dark: ${theme.accentDark || theme.accent};
+                --lt-border: ${theme.border};
+                --lt-border-hover: ${theme.borderHover};
+                --lt-text: ${theme.text};
+                --lt-text-secondary: ${theme.textSecondary};
+                --lt-gradient: ${theme.gradient};
+                --lt-gradient-light: ${theme.gradientLight};
+                --lt-shadow: ${theme.shadow};
+                --lt-shadow-hover: ${theme.shadowHover};
+                --lt-shadow-rgba: ${theme.shadow.replace("0.4", "0.3")};
                 --lt-rgb: ${rgbString};
+                --lt-radius-sm: ${ds.radius.sm};
+                --lt-radius-md: ${ds.radius.md};
+                --lt-radius-lg: ${ds.radius.lg};
+                --lt-radius-xl: ${ds.radius.xl};
+                --lt-blur-backdrop: ${ds.blur.backdrop};
+                --lt-blur-surface: ${ds.blur.surface};
+                --lt-transition: ${ds.transition};
             }
 
-            /* Force overlay backdrops to follow the active theme (overrides inline styles) */
+            /* Inline SVG icon wrapper */
+            .lt-icon {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                line-height: 0;
+            }
+            .lt-icon svg {
+                display: block;
+            }
+            .lt-spin svg {
+                animation: ltSpin 1.1s linear infinite;
+            }
+
+            /* Dark Amethyst glassmorphism overlay backdrop */
             .luatools-settings-overlay,
             .luatools-overlay,
             .luatools-loadedapps-overlay,
             .luatools-alert-overlay,
             .luatools-confirm-overlay {
-                background: rgba(${rgbString}, 0.12) !important;
-                backdrop-filter: blur(8px) !important;
+                position: fixed;
+                inset: 0;
+                padding: 20px;
+                box-sizing: border-box;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 99999;
+                background: radial-gradient(circle at 50% 30%, rgba(${rgbString}, 0.16) 0%, rgba(10, 8, 18, 0.84) 75%) !important;
+                -webkit-backdrop-filter: blur(${ds.blur.backdrop}) !important;
+                backdrop-filter: blur(${ds.blur.backdrop}) !important;
+            }
+            .luatools-alert-overlay,
+            .luatools-confirm-overlay {
+                z-index: 100001;
             }
 
-            /* Prefer overlay-scoped select rules to override theme CSS files */
+            /* Responsive glass modal panel — never overflows small viewports or Big Picture */
+            .lt-modal {
+                position: relative;
+                width: 100% !important;
+                max-width: min(var(--lt-modal-w, 500px), calc(100vw - 40px)) !important;
+                max-height: calc(100vh - 40px) !important;
+                margin: 0 auto;
+                flex: 0 1 auto;
+                overflow-y: auto;
+                overflow-x: hidden;
+                box-sizing: border-box;
+                padding: 24px 28px;
+                background: linear-gradient(160deg, rgba(44, 37, 66, 0.94) 0%, rgba(23, 19, 36, 0.97) 100%);
+                background-color: ${theme.bgPrimary};
+                color: ${theme.text};
+                border: 1px solid rgba(${rgbString}, 0.32);
+                border-radius: ${ds.radius.xl};
+                box-shadow: 0 24px 64px rgba(5, 3, 12, 0.78),
+                            0 8px 24px rgba(0, 0, 0, 0.45),
+                            0 0 36px rgba(${rgbString}, 0.12),
+                            inset 0 1px 0 rgba(255, 255, 255, 0.09);
+                -webkit-backdrop-filter: blur(${ds.blur.surface});
+                backdrop-filter: blur(${ds.blur.surface});
+            }
+
+            /* Subtle themed WebKit scrollbars inside modals & lists */
+            :is(.lt-modal, .lt-apps-list)::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+            :is(.lt-modal, .lt-apps-list)::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            :is(.lt-modal, .lt-apps-list)::-webkit-scrollbar-thumb {
+                background: rgba(${rgbString}, 0.28);
+                border-radius: ${ds.radius.pill};
+            }
+            :is(.lt-modal, .lt-apps-list)::-webkit-scrollbar-thumb:hover {
+                background: rgba(${rgbString}, 0.52);
+            }
+
+            /* Modal typography & header chrome */
+            .lt-modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+                margin-bottom: 18px;
+                padding-bottom: 14px;
+                border-bottom: 1px solid rgba(${rgbString}, 0.18);
+            }
+            .lt-modal-title {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 19px;
+                font-weight: 600;
+                letter-spacing: -0.01em;
+                color: ${theme.text};
+                line-height: 1.3;
+            }
+            .lt-icon-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            /* Top-right icon buttons (Discord, Settings, Close) */
+            .lt-icon-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 36px;
+                height: 36px;
+                background: rgba(${rgbString}, 0.08);
+                border: 1px solid rgba(${rgbString}, 0.24);
+                border-radius: ${ds.radius.md};
+                color: ${theme.accentLight};
+                text-decoration: none;
+                cursor: pointer;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+                transition: background ${ds.transition}, border-color ${ds.transition}, color ${ds.transition}, box-shadow ${ds.transition}, transform ${ds.transition};
+            }
+            .lt-icon-btn:hover {
+                background: rgba(${rgbString}, 0.2);
+                border-color: ${theme.accent};
+                color: ${theme.text};
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32), 0 0 14px rgba(${rgbString}, 0.25);
+            }
+
+            /* Big Picture callout tip */
+            .lt-tip {
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                background: rgba(${rgbString}, 0.1);
+                border: 1px solid rgba(${rgbString}, 0.22);
+                border-left: 3px solid ${theme.accent};
+                padding: 12px 14px;
+                border-radius: ${ds.radius.sm};
+                font-size: 13px;
+                color: ${theme.textSecondary};
+                margin-bottom: 16px;
+                line-height: 1.5;
+            }
+
+            /* Menu action cards */
+            .lt-card-grid {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                align-items: center;
+                gap: 12px;
+                width: 100%;
+            }
+            .lt-card-btn {
+                display: inline-flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                width: fit-content;
+                max-width: 100%;
+                flex: 0 1 auto;
+                gap: 10px;
+                padding: 12px 22px;
+                min-width: 0;
+                background: rgba(${rgbString}, 0.06);
+                border: 1px solid rgba(${rgbString}, 0.22);
+                border-radius: ${ds.radius.lg};
+                color: ${theme.text};
+                font-size: 13px;
+                font-weight: 600;
+                text-decoration: none;
+                text-align: center;
+                cursor: pointer;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+                transition: background ${ds.transition}, border-color ${ds.transition}, box-shadow ${ds.transition}, transform ${ds.transition};
+            }
+            .lt-card-btn .lt-icon {
+                color: ${theme.accent};
+                transition: color ${ds.transition}, transform ${ds.transition};
+            }
+            .lt-card-btn:hover {
+                background: rgba(${rgbString}, 0.14);
+                border-color: rgba(${rgbString}, 0.65);
+                box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35), 0 0 18px rgba(${rgbString}, 0.18);
+            }
+            .lt-card-btn:hover .lt-icon {
+                color: ${theme.accentLight};
+            }
+
+            /* Destructive / secondary Remove via LuaTools action */
+            .lt-danger-btn {
+                display: none;
+                align-items: center;
+                justify-content: center;
+                width: fit-content;
+                max-width: 100%;
+                flex: 0 1 auto;
+                gap: 8px;
+                padding: 11px 20px;
+                background: rgba(248, 113, 113, 0.07);
+                border: 1px solid rgba(248, 113, 113, 0.26);
+                border-radius: ${ds.radius.md};
+                color: #fca5a5;
+                font-size: 13px;
+                font-weight: 600;
+                text-decoration: none;
+                cursor: pointer;
+                text-align: center;
+                transition: background ${ds.transition}, border-color ${ds.transition}, color ${ds.transition}, box-shadow ${ds.transition}, transform ${ds.transition};
+            }
+            .lt-danger-btn:hover {
+                background: rgba(248, 113, 113, 0.15);
+                border-color: rgba(248, 113, 113, 0.6);
+                color: #fee2e2;
+                box-shadow: 0 6px 18px rgba(248, 113, 113, 0.16);
+            }
+
+            /* Download source rows */
+            .luatools-api-list {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                margin-bottom: 16px;
+            }
+            .luatools-api-item {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                flex-wrap: wrap;
+                padding: 11px 14px;
+                background: rgba(${rgbString}, 0.06);
+                border: 1px solid rgba(${rgbString}, 0.2);
+                border-radius: ${ds.radius.md};
+                transition: background ${ds.transition}, border-color ${ds.transition}, box-shadow ${ds.transition}, transform ${ds.transition};
+            }
+            .luatools-api-item.is-clickable {
+                cursor: pointer;
+            }
+            .luatools-api-item.is-clickable:hover {
+                background: rgba(${rgbString}, 0.14);
+                border-color: ${theme.accent};
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3), 0 0 14px rgba(${rgbString}, 0.18);
+            }
+            .luatools-api-item.is-downloading {
+                background: rgba(${rgbString}, 0.14);
+                border-color: rgba(${rgbString}, 0.55);
+                box-shadow: 0 0 16px rgba(${rgbString}, 0.16);
+            }
+            .lt-api-name {
+                font-size: 14px;
+                color: ${theme.text};
+                font-weight: 500;
+            }
+            .lt-api-badge {
+                font-size: 13px;
+                font-weight: 600;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            /* Download progress bar */
+            .luatools-progress-wrap {
+                display: none;
+                margin-top: 12px;
+            }
+            .luatools-progress-track {
+                background: rgba(0, 0, 0, 0.38);
+                height: 10px;
+                border-radius: ${ds.radius.pill};
+                overflow: hidden;
+                position: relative;
+                border: 1px solid rgba(${rgbString}, 0.28);
+                box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
+            }
+            .luatools-progress-bar {
+                height: 100%;
+                width: 0%;
+                background: ${theme.gradient};
+                border-radius: ${ds.radius.pill};
+                transition: width 0.25s ease;
+                box-shadow: 0 0 12px ${theme.shadow};
+            }
+            .luatools-progress-meta {
+                display: flex;
+                justify-content: flex-end;
+                margin-top: 6px;
+                font-size: 12px;
+                font-weight: 600;
+                color: ${theme.accentLight};
+                font-variant-numeric: tabular-nums;
+            }
+
+            /* Alert & Confirm hero icon badge */
+            .lt-dialog-icon {
+                width: 52px;
+                height: 52px;
+                margin: 0 auto 14px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(${rgbString}, 0.12);
+                border: 1px solid rgba(${rgbString}, 0.28);
+                color: ${theme.accentLight};
+                box-shadow: 0 0 24px rgba(${rgbString}, 0.2);
+            }
+
+            /* Added Games list */
+            .lt-apps-list {
+                font-size: 14px;
+                line-height: 1.5;
+                margin-bottom: 16px;
+                max-height: min(320px, 48vh);
+                overflow-y: auto;
+                padding: 12px;
+                border: 1px solid rgba(${rgbString}, 0.22);
+                border-radius: ${ds.radius.lg};
+                background: rgba(12, 10, 20, 0.45);
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .lt-app-link {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                color: ${theme.textSecondary};
+                text-decoration: none;
+                padding: 10px 14px;
+                background: rgba(${rgbString}, 0.07);
+                border: 1px solid rgba(${rgbString}, 0.18);
+                border-radius: ${ds.radius.sm};
+                font-weight: 500;
+                transition: background ${ds.transition}, border-color ${ds.transition}, color ${ds.transition}, box-shadow ${ds.transition}, transform ${ds.transition};
+            }
+            .lt-app-link:hover {
+                background: rgba(${rgbString}, 0.18);
+                border-color: ${theme.accent};
+                color: ${theme.text};
+                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+            }
+            .lt-apps-footer {
+                margin-top: 16px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            /* Prefer overlay-scoped select rules */
             .luatools-settings-overlay select,
             .luatools-overlay select,
             .luatools-loadedapps-overlay select {
                 background-color: ${theme.bgTertiary} !important;
                 color: ${theme.text} !important;
                 border: 1px solid ${theme.border} !important;
-                border-radius: 3px !important;
-                padding: 6px 8px !important;
+                border-radius: ${ds.radius.sm} !important;
+                padding: 6px 10px !important;
                 font-size: 14px !important;
+                transition: border-color ${ds.transition}, box-shadow ${ds.transition};
             }
             .luatools-settings-overlay select option,
             .luatools-overlay select option,
@@ -1232,52 +1663,48 @@
                 border-color: ${theme.accent} !important;
                 box-shadow: 0 0 0 2px ${theme.shadow} !important;
             }
+
+            /* Primary & secondary modal buttons */
             .luatools-btn {
-                padding: 12px 24px;
-                background: ${theme.bgSecondary};
-                border: 2px solid ${theme.border.replace("0.3", "0.5")};
-                border-radius: 12px;
+                padding: 10px 22px;
+                background: rgba(${rgbString}, 0.1);
+                border: 1px solid rgba(${rgbString}, 0.35);
+                border-radius: ${ds.radius.md};
                 color: ${theme.text};
-                font-size: 15px;
+                font-size: 14px;
                 font-weight: 600;
                 text-decoration: none;
-                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                transition: background ${ds.transition}, border-color ${ds.transition}, color ${ds.transition}, box-shadow ${ds.transition}, transform ${ds.transition};
                 cursor: pointer;
-                box-shadow: 0 2px 8px ${theme.shadow};
-                letter-spacing: 0.3px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+                letter-spacing: 0.2px;
             }
             .luatools-btn:hover:not([data-disabled="1"]) {
-                background: ${theme.bgHover};
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px ${theme.shadowHover};
+                background: rgba(${rgbString}, 0.2);
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), 0 0 14px rgba(${rgbString}, 0.25);
                 border-color: ${theme.borderHover};
             }
             .luatools-btn:active:not([data-disabled="1"]) {
-                transform: translateY(0) scale(0.99);
-                box-shadow: 0 1px 4px ${theme.shadow};
+                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
                 border-color: ${theme.accent};
             }
             .luatools-btn.primary {
                 background: ${theme.gradient};
-                border-color: ${theme.borderHover.replace("0.8", "0.8")};
-                /* Same reason as select option:checked — dark ink on the light violet fill. */
+                border-color: ${theme.borderHover};
+                /* Dark ink on light violet fill ensures >= 6.5:1 WCAG contrast */
                 color: ${theme.bgPrimary};
                 font-weight: 700;
-                box-shadow: 0 4px 15px ${theme.shadow}, inset 0 1px 0 rgba(255,255,255,0.3);
-                text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
+                box-shadow: 0 4px 16px ${theme.shadow}, inset 0 1px 0 rgba(255, 255, 255, 0.35);
             }
             .luatools-btn.primary:hover:not([data-disabled="1"]) {
                 background: ${theme.gradientLight};
-                transform: translateY(-3px) scale(1.03);
-                box-shadow: 0 8px 25px ${theme.shadowHover}, inset 0 1px 0 rgba(255, 255, 255, 0.4);
+                box-shadow: 0 8px 24px ${theme.shadowHover}, 0 0 18px rgba(${rgbString}, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45);
             }
             .luatools-btn.primary:active:not([data-disabled="1"]) {
                 /* Pressed inverts the fill: deep violet, so the ink flips back to theme.text. */
                 background: ${theme.accentDark || theme.accent};
                 color: ${theme.text};
-                text-shadow: none;
-                transform: translateY(0) scale(0.99);
-                box-shadow: 0 1px 4px ${theme.shadow};
+                box-shadow: 0 2px 6px ${theme.shadow};
             }
 
             /* Modern Toggle Switch */
@@ -1314,7 +1741,7 @@
                 right: 0;
                 bottom: 0;
                 background-color: rgba(255, 255, 255, 0.1);
-                transition: .4s;
+                transition: background-color ${ds.transition}, border-color ${ds.transition};
                 border-radius: 34px;
                 border: 1px solid rgba(255, 255, 255, 0.2);
             }
@@ -1326,7 +1753,7 @@
                 left: 3px;
                 bottom: 3px;
                 background-color: #ffffff;
-                transition: .4s;
+                transition: transform ${ds.transition};
                 border-radius: 50%;
                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
             }
@@ -1348,84 +1775,176 @@
             @keyframes slideUp {
                 from {
                     opacity: 0;
-                    transform: scale(0.9);
+                    transform: translateY(8px) scale(0.97);
                 }
                 to {
                     opacity: 1;
-                    transform: scale(1);
+                    transform: translateY(0) scale(1);
                 }
             }
-            @keyframes spin {
+            @keyframes ltSpin {
                 from { transform: rotate(0deg); }
                 to { transform: rotate(360deg); }
             }
-            @keyframes pulse {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.7; }
+            @keyframes fadeInOut {
+                0% { opacity: 0; transform: translateY(10px); }
+                10% { opacity: 1; transform: translateY(0); }
+                90% { opacity: 1; transform: translateY(0); }
+                100% { opacity: 0; transform: translateY(10px); }
             }
 
-            /* Store header button - LuaTools themed icon button */
+            /* Store header button - Amethyst glass icon button with soft hover glow */
             button.luatools-header-button {
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
                 align-self: center;
-                width: 36px;
-                height: 36px;
+                width: 34px;
+                height: 34px;
                 padding: 0;
-                border: 2px solid ${theme.border.replace("0.3", "0.5")};
-                border-radius: 4px;
-                background: ${theme.bgSecondary};
-                color: ${theme.text};
+                border: 1px solid rgba(${rgbString}, 0.38);
+                border-radius: ${ds.radius.sm};
+                background: linear-gradient(145deg, rgba(48, 40, 70, 0.92), rgba(26, 22, 38, 0.96));
+                color: ${theme.accentLight};
                 cursor: pointer;
-                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-                box-shadow: 0 2px 8px ${theme.shadow};
-                margin-left: 12px;
+                transition: background ${ds.transition}, border-color ${ds.transition}, color ${ds.transition}, box-shadow ${ds.transition}, transform ${ds.transition};
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), 0 0 10px rgba(${rgbString}, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+                margin-left: 10px;
             }
             button.luatools-header-button:hover {
-                background: ${theme.bgHover};
-                transform: translateY(-1px);
-                box-shadow: 0 4px 12px ${theme.shadowHover};
-                border-color: ${theme.borderHover};
-            }
-            button.luatools-header-button:focus-visible {
-                outline: 2px solid ${theme.accent};
-                outline-offset: 2px;
+                background: linear-gradient(145deg, rgba(68, 56, 98, 0.96), rgba(38, 31, 56, 0.98));
+                color: ${theme.text};
+                border-color: ${theme.accentLight};
+                box-shadow: 0 0 16px rgba(${rgbString}, 0.5), 0 4px 14px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
             }
             button.luatools-header-button img,
             button.luatools-header-button svg {
-                height: 16px;
-                width: 16px;
+                height: 17px;
+                width: 17px;
             }
 
-            /* Keyboard focus. Our overlay controls are <a href="#"> and bare <button>s that
-               Steam's own sheet never reaches, so without this there is no visible focus
-               ring anywhere in the modals. */
-            :is(
-                .luatools-settings-overlay,
-                .luatools-overlay,
-                .luatools-loadedapps-overlay,
-                .luatools-alert-overlay,
-                .luatools-confirm-overlay
-            ) :is(a, button, input, [tabindex]):focus-visible {
-                outline: 2px solid ${theme.accent};
-                outline-offset: 2px;
+            /* Store page buttons & status pills */
+            .luatools-restart-button {
+                margin-left: 0 !important;
+                margin-right: 4px !important;
+                transition: filter ${ds.transition}, box-shadow ${ds.transition}, transform ${ds.transition};
+            }
+            .luatools-button {
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                position: relative !important;
+                transition: filter ${ds.transition}, box-shadow ${ds.transition}, transform ${ds.transition};
+            }
+            .luatools-pills-container {
+                position: absolute !important;
+                top: -24px !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                display: inline-flex;
+                gap: 4px;
+                align-items: center;
+                pointer-events: none;
+                z-index: 10;
+                white-space: nowrap;
+            }
+            .luatools-pill {
+                padding: 2px 7px;
                 border-radius: 6px;
+                font-size: 9px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                display: inline-flex;
+                align-items: center;
+                height: 16px;
+                line-height: 1;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.32);
+                -webkit-backdrop-filter: blur(${ds.blur.pill});
+                backdrop-filter: blur(${ds.blur.pill});
+                cursor: default;
+            }
+            .luatools-pill.red { background: rgba(248, 113, 113, 0.16); color: ${ds.status.danger}; border: 1px solid rgba(248, 113, 113, 0.36); }
+            .luatools-pill.green { background: rgba(74, 222, 128, 0.16); color: ${ds.status.success}; border: 1px solid rgba(74, 222, 128, 0.36); }
+            .luatools-pill.yellow { background: rgba(251, 191, 36, 0.16); color: ${ds.status.warning}; border: 1px solid rgba(251, 191, 36, 0.36); }
+            .luatools-pill.orange { background: rgba(251, 146, 60, 0.16); color: ${ds.status.orange}; border: 1px solid rgba(251, 146, 60, 0.36); }
+
+            /* Big Picture gamepad toast */
+            #luatools-gamepad-hint {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                max-width: calc(100vw - 40px);
+                box-sizing: border-box;
+                background: ${theme.bgTertiary};
+                color: ${theme.accentLight};
+                padding: 12px 16px;
+                border-radius: ${ds.radius.md};
+                font-size: 13px;
+                font-weight: 500;
+                z-index: 99998;
+                border: 1px solid rgba(${rgbString}, 0.32);
+                box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 16px rgba(${rgbString}, 0.16);
+                -webkit-backdrop-filter: blur(${ds.blur.backdrop});
+                backdrop-filter: blur(${ds.blur.backdrop});
             }
 
-            /* Modals are fixed-width (420-560px) with no bound. Cap them so Big Picture and
-               small client windows can't push the action buttons off-screen. */
+            /* Visible keyboard focus rings across all injected controls and modal surfaces */
+            button.luatools-header-button:focus-visible,
+            .luatools-button:focus-visible,
+            .luatools-restart-button:focus-visible,
             :is(
                 .luatools-settings-overlay,
                 .luatools-overlay,
                 .luatools-loadedapps-overlay,
                 .luatools-alert-overlay,
                 .luatools-confirm-overlay
-            ) > div {
-                max-width: calc(100vw - 48px) !important;
-                max-height: calc(100vh - 48px) !important;
-                overflow-y: auto !important;
-                box-sizing: border-box !important;
+            ) :is(a, button, input, select, [tabindex]):focus-visible {
+                outline: 2px solid ${theme.accentLight} !important;
+                outline-offset: 2px !important;
+                box-shadow: 0 0 0 4px rgba(${rgbString}, 0.26) !important;
+            }
+
+            /* Motion-safe micro-interactions & entrance animations */
+            @media (prefers-reduced-motion: no-preference) {
+                .luatools-settings-overlay,
+                .luatools-overlay,
+                .luatools-loadedapps-overlay,
+                .luatools-alert-overlay,
+                .luatools-confirm-overlay {
+                    animation: fadeIn 0.16s ease-out;
+                }
+                .lt-modal {
+                    animation: slideUp 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+                }
+                #luatools-gamepad-hint {
+                    animation: fadeInOut 3s ease-in-out forwards;
+                }
+                button.luatools-header-button:hover {
+                    transform: translateY(-1px);
+                }
+                button.luatools-header-button:active {
+                    transform: translateY(0) scale(0.96);
+                }
+                .luatools-btn:hover:not([data-disabled="1"]),
+                .lt-icon-btn:hover,
+                .lt-card-btn:hover,
+                .lt-danger-btn:hover {
+                    transform: translateY(-1px);
+                }
+                .luatools-btn:active:not([data-disabled="1"]),
+                .lt-icon-btn:active,
+                .lt-card-btn:active,
+                .lt-danger-btn:active,
+                .luatools-api-item.is-clickable:active {
+                    transform: translateY(0) scale(0.98);
+                }
+                .lt-card-btn:hover .lt-icon {
+                    transform: scale(1.06);
+                }
+                .luatools-api-item.is-clickable:hover,
+                .lt-app-link:hover {
+                    transform: translateX(3px);
+                }
             }
 
             @media (prefers-reduced-motion: reduce) {
@@ -1448,48 +1967,19 @@
                     animation-iteration-count: 1 !important;
                     transition-duration: 0.01ms !important;
                 }
-                /* Carve-out: the spinner is the only progress affordance while an add is in
-                   flight — freezing it would read as a hang. */
-                .luatools-status .fa-spinner {
-                    animation-duration: 1.5s !important;
+                /* Carve-out: spinner is the live progress affordance during add/download */
+                .lt-spin svg {
+                    animation-duration: 1.4s !important;
                     animation-iteration-count: infinite !important;
                 }
             }
         `;
   }
 
-  function ensureThemeStylesheet(themeKey) {
-    const id = "luatools-theme-css";
-    const href = "themes/" + themeKey + ".css";
-    const link = document.getElementById(id);
-    if (link) {
-      const currentTheme = link.getAttribute("data-theme");
-      if (currentTheme === themeKey) return;
-      link.href = href;
-      link.setAttribute("data-theme", themeKey);
-      return;
-    }
-    try {
-      const el = document.createElement("link");
-      el.id = id;
-      el.rel = "stylesheet";
-      el.href = href;
-      el.setAttribute("data-theme", themeKey);
-      document.head.appendChild(el);
-    } catch (err) {
-      backendLog("LuaTools: Theme CSS injection failed: " + err);
-    }
-  }
-
   function ensureLuaToolsStyles() {
     const styleEl = document.getElementById("luatools-styles");
-    const themeKey = getCurrentThemeKey();
     const theme = getCurrentTheme();
     const styles = generateThemeStyles(theme);
-
-    try {
-      ensureThemeStylesheet(themeKey);
-    } catch (_) {}
 
     if (styleEl) {
       styleEl.textContent = styles;
@@ -1505,33 +1995,14 @@
     }
   }
 
-  function ensureFontAwesome() {
-    if (document.getElementById("luatools-fontawesome")) return;
-    try {
-      const link = document.createElement("link");
-      link.id = "luatools-fontawesome";
-      link.rel = "stylesheet";
-      link.href =
-        "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css";
-      link.integrity =
-        "sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==";
-      link.crossOrigin = "anonymous";
-      link.referrerPolicy = "no-referrer";
-      document.head.appendChild(link);
-    } catch (err) {
-      backendLog("LuaTools: Font Awesome injection failed: " + err);
-    }
-  }
-
-  // Overlay controls are markup sandwiches: a Font Awesome <i>, a styled <span>, or both.
-  // Build them as nodes. Assembling that markup as a string means every t()/lt() result is
-  // parsed as HTML — harmless while the bundles are inlined in this file, a live XSS the
-  // day a translation arrives from anywhere else.
-  function ltIcon(iconClass, style) {
-    const i = document.createElement("i");
-    i.className = "fa-solid " + iconClass;
-    if (style) i.style.cssText = style;
-    return i;
+  // Overlay controls are markup sandwiches: an inline SVG icon span, a styled label span, or both.
+  // Build them as nodes so translated strings are always assigned via textContent (never innerHTML).
+  function ltIcon(name, style, size) {
+    const span = document.createElement("span");
+    span.className = name === "spinner" ? "lt-icon lt-spin" : "lt-icon";
+    span.innerHTML = getSvgIcon(name, size);
+    if (style) span.style.cssText = style;
+    return span;
   }
 
   function ltLabel(text, style) {
@@ -1565,25 +2036,26 @@
           if (d) d.remove();
         } catch (_) {}
         ensureLuaToolsStyles();
-        ensureFontAwesome();
 
         const overlay = document.createElement("div");
         overlay.className = "luatools-settings-overlay";
-        overlay.style.cssText =
-          "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:99999;display:flex;align-items:center;justify-content:center;";
 
         const modal = document.createElement("div");
-        const colors = getThemeColors();
-        modal.style.cssText = `position:relative;background:${colors.modalBg};color:${colors.text};border:1px solid ${colors.border};border-radius:16px;width:460px;padding:20px 24px;box-shadow:0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.12s ease-out;`;
+        modal.className = "lt-modal";
+        modal.style.setProperty("--lt-modal-w", "540px");
+        modal.setAttribute("role", "dialog");
+        modal.setAttribute("aria-modal", "true");
+        modal.setAttribute("aria-labelledby", "lt-menu-title");
 
         const header = document.createElement("div");
-        header.style.cssText = `display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid ${colors.borderRgba};`;
+        header.className = "lt-modal-header";
 
         const title = document.createElement("div");
-        title.style.cssText = `display:flex;align-items:center;gap:10px;font-size:22px;color:${colors.text};font-weight:600;`;
+        title.id = "lt-menu-title";
+        title.className = "lt-modal-title";
         const titleIcon = document.createElement("img");
-        titleIcon.style.cssText = "width:24px;height:24px;border-radius:4px;";
-        titleIcon.alt = "LuaTools";
+        titleIcon.style.cssText = "width:24px;height:24px;border-radius:6px;";
+        titleIcon.alt = "";
         // Stay hidden until a src lands. A relative "LuaTools/..." path resolves against
         // the Steam store origin (404), so the data URL from the bridge is the only source.
         titleIcon.style.display = "none";
@@ -1609,46 +2081,31 @@
         title.appendChild(titleText);
 
         const iconButtons = document.createElement("div");
-        iconButtons.style.cssText = "display:flex;gap:12px;";
+        iconButtons.className = "lt-icon-row";
 
-        function createIconButton(id, iconClass, titleKey, titleFallback) {
+        function createIconButton(id, iconName, titleKey, titleFallback) {
           const btn = document.createElement("a");
           btn.id = id;
           btn.href = "#";
-          const btnColors = getThemeColors();
-          btn.style.cssText = `display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(${btnColors.rgbString},0.1);border:1px solid ${btnColors.borderRgba};border-radius:10px;color:${btnColors.accent};font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;`;
-          btn.replaceChildren(ltIcon(iconClass));
+          btn.className = "lt-icon-btn";
+          btn.replaceChildren(ltIcon(iconName, "", 18));
           btn.title = t(titleKey, titleFallback);
-          // Icon-only control: the glyph carries no accessible name on its own.
           btn.setAttribute("aria-label", btn.title);
-          btn.onmouseover = function () {
-            this.style.background = `rgba(${btnColors.rgbString},0.25)`;
-            this.style.transform = "translateY(-2px) scale(1.05)";
-            this.style.boxShadow = `0 8px 16px ${btnColors.shadowRgba}`;
-            this.style.borderColor = btnColors.accent;
-          };
-          btn.onmouseout = function () {
-            this.style.background = `rgba(${btnColors.rgbString},0.1)`;
-            this.style.transform = "translateY(0) scale(1)";
-            this.style.boxShadow = "none";
-            this.style.borderColor = btnColors.borderRgba;
-          };
           iconButtons.appendChild(btn);
           return btn;
         }
 
         const body = document.createElement("div");
-        body.style.cssText =
-          "font-size:14px;line-height:1.6;margin-bottom:12px;";
+        body.style.cssText = "font-size:14px;line-height:1.6;";
 
         // Add mouse mode tip for Big Picture
         if (window.__LUATOOLS_IS_BIG_PICTURE__) {
+          const colors = getThemeColors();
           const tip = document.createElement("div");
-          tip.style.cssText =
-            `background:rgba(${colors.rgbString},0.15);border-left:3px solid ${colors.accent};padding:12px 16px;border-radius:6px;font-size:13px;color:${colors.textSecondary};margin-bottom:16px;line-height:1.5;`;
+          tip.className = "lt-tip";
           tip.replaceChildren(
-            ltIcon("fa-info-circle", "margin-right:8px;color:" + colors.accent + ";"),
-            document.createTextNode(
+            ltIcon("info", "color:" + colors.accent + ";margin-top:2px;", 16),
+            ltLabel(
               t(
                 "bigpicture.mouseTip",
                 "To use mouse mode in Steam: Guide Button + Right Joystick, click with RB",
@@ -1660,55 +2117,38 @@
 
         const container = document.createElement("div");
         container.style.cssText =
-          "margin-top:16px;display:flex;flex-direction:column;gap:12px;align-items:stretch;";
+          "display:flex;flex-direction:column;gap:12px;align-items:center;";
 
-        function createCardButton(id, key, fallback, iconClass) {
+        function createCardButton(id, key, fallback, iconName) {
           const btn = document.createElement("a");
           btn.id = id;
           btn.href = "#";
-          const btnColors = getThemeColors();
-          btn.style.cssText = `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;flex:1;background:rgba(${btnColors.rgbString},0.06);border:1px solid ${btnColors.borderRgba};border-radius:12px;color:${btnColors.text};font-size:11px;font-weight:500;text-decoration:none;transition:all 0.2s ease;cursor:pointer;text-align:center;padding:14px 6px;min-width:0;`;
+          btn.className = "lt-card-btn";
           btn.replaceChildren();
-          if (iconClass) {
-            btn.appendChild(
-              ltIcon(iconClass, "font-size:22px;color:" + btnColors.accent + ";"),
-            );
+          if (iconName) {
+            btn.appendChild(ltIcon(iconName, "", 22));
           }
           btn.appendChild(
             ltLabel(t(key, fallback), "text-align:center;line-height:1.3;"),
           );
-          btn.onmouseover = function () {
-            const c = getThemeColors();
-            this.style.background = `rgba(${c.rgbString},0.15)`;
-            this.style.transform = "translateY(-2px)";
-            this.style.boxShadow = `0 8px 20px ${c.shadow.replace("0.4", "0.15")}`;
-            this.style.borderColor = c.accent;
-          };
-          btn.onmouseout = function () {
-            const c = getThemeColors();
-            this.style.background = `rgba(${c.rgbString},0.06)`;
-            this.style.transform = "translateY(0)";
-            this.style.boxShadow = "none";
-            this.style.borderColor = c.borderRgba;
-          };
           return btn;
         }
 
         const discordBtn = createIconButton(
           "lt-settings-discord",
-          "fa-brands fa-discord",
+          "discord",
           "menu.discord",
           "Discord",
         );
         const settingsManagerBtn = createIconButton(
           "lt-settings-open-manager",
-          "fa-gear",
+          "settings",
           "menu.settings",
           "Settings",
         );
         const closeBtn = createIconButton(
           "lt-settings-close",
-          "fa-xmark",
+          "close",
           "settings.close",
           "Close",
         );
@@ -1719,34 +2159,22 @@
         const removeBtn = document.createElement("a");
         removeBtn.id = "lt-settings-remove-lua";
         removeBtn.href = "#";
-        const removeBtnColors = getThemeColors();
-        removeBtn.style.cssText = `display:none;align-items:center;justify-content:center;gap:8px;padding:10px 16px;background:rgba(${removeBtnColors.rgbString},0.06);border:1px solid ${removeBtnColors.borderRgba};border-radius:10px;color:${removeBtnColors.textSecondary};font-size:13px;font-weight:500;text-decoration:none;transition:all 0.2s ease;cursor:pointer;text-align:center;`;
+        removeBtn.className = "lt-danger-btn";
         removeBtn.replaceChildren(
-          ltIcon("fa-trash-can", "font-size:13px;"),
+          ltIcon("trash", "", 15),
           ltLabel(t("menu.removeLuaTools", "Remove via LuaTools")),
         );
-        removeBtn.onmouseover = function () {
-          const c = getThemeColors();
-          this.style.background = `rgba(${c.rgbString},0.15)`;
-          this.style.borderColor = c.accent;
-        };
-        removeBtn.onmouseout = function () {
-          const c = getThemeColors();
-          this.style.background = `rgba(${c.rgbString},0.06)`;
-          this.style.borderColor = c.borderRgba;
-        };
         container.appendChild(removeBtn);
 
         // Card button grid
         const cardGrid = document.createElement("div");
-        cardGrid.style.cssText =
-          "display:flex;gap:10px;justify-content:center;";
+        cardGrid.className = "lt-card-grid";
 
         const fixesMenuBtn = createCardButton(
           "lt-settings-fixes-menu",
           "menu.fixesMenu",
           "Fixes Menu",
-          "fa-wrench",
+          "wrench",
         );
         if (isGamePage) cardGrid.appendChild(fixesMenuBtn);
 
@@ -1754,7 +2182,7 @@
           "lt-settings-check",
           "menu.checkForUpdates",
           "Check Updates",
-          "fa-cloud-arrow-down",
+          "download",
         );
         cardGrid.appendChild(checkBtn);
 
@@ -1767,6 +2195,9 @@
         modal.appendChild(header);
         modal.appendChild(body);
         overlay.appendChild(modal);
+        overlay.addEventListener("click", function (e) {
+          if (e.target === overlay) overlay.remove();
+        });
         document.body.appendChild(overlay);
 
         // Re-scan elements for gamepad navigation
@@ -1943,7 +2374,7 @@
                     }
                   };
 
-                  removeBtn.style.display = "flex";
+                  removeBtn.style.display = "inline-flex";
                   removeBtn.onclick = function (e) {
                     e.preventDefault();
                     try {
@@ -2106,7 +2537,7 @@
 
   let settingsMenuPending = false;
 
-  // Helper: show a Steam-style popup with a 10s loading bar (custom UI)
+  // Helper: show download source picker & progress modal
   function showTestPopup() {
     // Avoid duplicates
     if (document.querySelector(".luatools-overlay")) return;
@@ -2117,74 +2548,73 @@
     } catch (_) {}
 
     ensureLuaToolsStyles();
-    ensureFontAwesome();
     const overlay = document.createElement("div");
     overlay.className = "luatools-overlay";
-    overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:99999;display:flex;align-items:center;justify-content:center;";
 
     const modal = document.createElement("div");
     const colors = getThemeColors();
-    modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:1px solid ${colors.border};border-radius:16px;width:520px;padding:28px 32px;box-shadow:0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.12s ease-out;`;
+    modal.className = "lt-modal";
+    modal.style.setProperty("--lt-modal-w", "480px");
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "lt-dl-title");
 
     const title = document.createElement("div");
-    const titleColors = getThemeColors();
-    title.style.cssText = `display:flex;align-items:center;gap:10px;font-size:20px;color:${titleColors.text};margin-bottom:16px;font-weight:600;`;
-    title.className = "luatools-title";
-    const dlTitleIcon = document.createElement("i");
-    dlTitleIcon.className = "fa-solid fa-cloud-arrow-down";
-    dlTitleIcon.style.cssText = `color:${titleColors.accent};font-size:20px;`;
-    title.appendChild(dlTitleIcon);
-    const dlTitleText = document.createElement("span");
-    dlTitleText.textContent = lt("Select Download Source");
-    title.appendChild(dlTitleText);
+    title.id = "lt-dl-title";
+    title.className = "luatools-title lt-modal-title";
+    title.style.marginBottom = "16px";
+    title.replaceChildren(
+      ltIcon("download", "color:" + colors.accent + ";", 20),
+      ltLabel(lt("Select Download Source")),
+    );
 
     // API list container — starts empty; the "Checking availability…" status below conveys
     // loading, and renderSources() fills this once the app reports sources.
     const apiListContainer = document.createElement("div");
     apiListContainer.className = "luatools-api-list";
-    apiListContainer.style.cssText = "margin-bottom:16px;";
 
     // NOTE: the source list is populated/updated by startLuaToolsAdd() from the
     // app's live DownloadViewModel state (/add-status). We intentionally do NOT
     // pre-fill it here — doing so raced with (and clobbered) the clickable rows.
 
     const body = document.createElement("div");
-    body.style.cssText = `display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;line-height:1.5;margin-bottom:12px;color:${colors.textSecondary};`;
+    body.style.cssText = `display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;line-height:1.5;margin-bottom:12px;color:${colors.textSecondary};text-align:center;`;
     body.className = "luatools-status";
+    body.setAttribute("role", "status");
+    body.setAttribute("aria-live", "polite");
     body.replaceChildren(
-      ltIcon("fa-spinner", "font-size:14px;animation: spin 1.5s linear infinite;"),
+      ltIcon("spinner", "color:" + colors.accentLight + ";", 15),
       ltLabel(lt("Checking availability…")),
     );
 
     const progressWrap = document.createElement("div");
-    progressWrap.style.cssText = `background:rgba(0,0,0,0.3);height:20px;border-radius:4px;overflow:hidden;position:relative;display:none;border:1px solid ${colors.border};margin-top:12px;`;
     progressWrap.className = "luatools-progress-wrap";
+    const progressTrack = document.createElement("div");
+    progressTrack.className = "luatools-progress-track";
     const progressBar = document.createElement("div");
-    progressBar.style.cssText = `height:100%;width:0%;background:${colors.gradient};transition:width 0.3s ease;box-shadow:0 0 10px ${colors.shadow};`;
     progressBar.className = "luatools-progress-bar";
-    progressWrap.appendChild(progressBar);
+    progressTrack.appendChild(progressBar);
 
-    const progressInfo = document.createElement("div");
-    progressInfo.style.cssText = `display:none;margin-top:8px;font-size:12px;color:${colors.textSecondary};`;
-    progressInfo.className = "luatools-progress-info";
-
+    const progressMeta = document.createElement("div");
+    progressMeta.className = "luatools-progress-meta";
     const percent = document.createElement("span");
     percent.className = "luatools-percent";
     percent.textContent = "0%";
+    progressMeta.appendChild(percent);
 
-    progressInfo.appendChild(percent);
+    progressWrap.appendChild(progressTrack);
+    progressWrap.appendChild(progressMeta);
 
     const btnRow = document.createElement("div");
     btnRow.style.cssText =
-      "margin-top:20px;display:flex;gap:8px;justify-content:center;";
+      "margin-top:20px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;";
     // Single button: "Cancel" while the add is in flight (stops it + closes), "Close" once it's
     // finished (just closes). The poll flips the label to "Close" on success. Class kept as
     // .luatools-hide-btn so the poll's existing selector still finds it.
     const hideBtn = document.createElement("a");
     hideBtn.className = "luatools-btn luatools-hide-btn";
     hideBtn.style.cssText =
-      "display:flex;align-items:center;justify-content:center;text-align:center;";
+      "min-width:130px;display:flex;align-items:center;justify-content:center;text-align:center;";
     setButtonLabel(hideBtn, lt("Cancel"));
     hideBtn.href = "#";
     hideBtn.onclick = function (e) {
@@ -2200,7 +2630,6 @@
     modal.appendChild(apiListContainer);
     modal.appendChild(body);
     modal.appendChild(progressWrap);
-    modal.appendChild(progressInfo);
     modal.appendChild(btnRow);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
@@ -2336,29 +2765,28 @@
     if (document.querySelector(".luatools-alert-overlay")) return;
 
     ensureLuaToolsStyles();
-    ensureFontAwesome();
     const overlay = document.createElement("div");
     overlay.className = "luatools-alert-overlay";
-    overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:100001;display:flex;align-items:center;justify-content:center;";
 
     const modal = document.createElement("div");
     const alertModalColors = getThemeColors();
-    modal.style.cssText = `background:${alertModalColors.modalBg};color:${alertModalColors.text};border:1px solid ${alertModalColors.border};border-radius:16px;width:420px;padding:28px 32px;box-shadow:0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${alertModalColors.shadowRgba};animation:slideUp 0.12s ease-out;`;
+    modal.className = "lt-modal";
+    modal.style.setProperty("--lt-modal-w", "420px");
+    modal.setAttribute("role", "alertdialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "lt-alert-title");
 
     const alertIconWrap = document.createElement("div");
-    alertIconWrap.style.cssText = "text-align:center;margin-bottom:12px;";
-    const alertIcon = document.createElement("i");
-    alertIcon.className = "fa-solid fa-circle-info";
-    alertIcon.style.cssText = `color:${alertModalColors.accent};font-size:32px;`;
-    alertIconWrap.appendChild(alertIcon);
+    alertIconWrap.className = "lt-dialog-icon";
+    alertIconWrap.appendChild(ltIcon("info", "", 24));
 
     const titleEl = document.createElement("div");
-    titleEl.style.cssText = `font-size:20px;color:${alertModalColors.text};margin-bottom:12px;font-weight:600;text-align:center;`;
+    titleEl.id = "lt-alert-title";
+    titleEl.style.cssText = `font-size:19px;color:${alertModalColors.text};margin-bottom:10px;font-weight:600;text-align:center;`;
     titleEl.textContent = String(title || "LuaTools");
 
     const messageEl = document.createElement("div");
-    messageEl.style.cssText = `font-size:14px;line-height:1.6;margin-bottom:24px;color:${alertModalColors.textSecondary};text-align:center;`;
+    messageEl.style.cssText = `font-size:14px;line-height:1.6;margin-bottom:22px;color:${alertModalColors.textSecondary};text-align:center;word-break:break-word;`;
     messageEl.textContent = String(message || "");
 
     const btnRow = document.createElement("div");
@@ -2426,39 +2854,39 @@
     if (document.querySelector(".luatools-confirm-overlay")) return;
 
     ensureLuaToolsStyles();
-    ensureFontAwesome();
     const overlay = document.createElement("div");
     overlay.className = "luatools-confirm-overlay";
-    overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:100001;display:flex;align-items:center;justify-content:center;";
 
     const modal = document.createElement("div");
     const confirmColors = getThemeColors();
-    modal.style.cssText = `background:${confirmColors.modalBg};color:${confirmColors.text};border:1px solid ${confirmColors.border};border-radius:16px;width:420px;padding:28px 32px;box-shadow:0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${confirmColors.shadowRgba};animation:slideUp 0.12s ease-out;`;
+    modal.className = "lt-modal";
+    modal.style.setProperty("--lt-modal-w", "420px");
+    modal.setAttribute("role", "alertdialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "lt-confirm-title");
 
     const confirmIconWrap = document.createElement("div");
-    confirmIconWrap.style.cssText = "text-align:center;margin-bottom:12px;";
-    const confirmIcon = document.createElement("i");
-    confirmIcon.className = "fa-solid fa-circle-question";
-    confirmIcon.style.cssText = `color:${confirmColors.accent};font-size:32px;`;
-    confirmIconWrap.appendChild(confirmIcon);
+    confirmIconWrap.className = "lt-dialog-icon";
+    confirmIconWrap.appendChild(ltIcon("question", "", 24));
 
     const titleEl = document.createElement("div");
-    titleEl.style.cssText = `font-size:20px;color:${confirmColors.text};margin-bottom:12px;font-weight:600;text-align:center;`;
+    titleEl.id = "lt-confirm-title";
+    titleEl.style.cssText = `font-size:19px;color:${confirmColors.text};margin-bottom:10px;font-weight:600;text-align:center;`;
     titleEl.textContent = String(title || "LuaTools");
 
     const messageEl = document.createElement("div");
-    messageEl.style.cssText = `font-size:14px;line-height:1.6;margin-bottom:24px;color:${confirmColors.textSecondary};text-align:center;`;
+    messageEl.style.cssText = `font-size:14px;line-height:1.6;margin-bottom:22px;color:${confirmColors.textSecondary};text-align:center;word-break:break-word;`;
     messageEl.textContent = String(message || lt("Are you sure?"));
 
     const btnRow = document.createElement("div");
-    btnRow.style.cssText = "display:flex;gap:12px;justify-content:center;";
+    btnRow.style.cssText =
+      "display:flex;flex-wrap:wrap;gap:12px;justify-content:center;";
 
     const cancelBtn = document.createElement("a");
     cancelBtn.href = "#";
     cancelBtn.className = "luatools-btn";
     cancelBtn.style.cssText =
-      "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
+      "flex:1;min-width:120px;display:flex;align-items:center;justify-content:center;text-align:center;";
     setButtonLabel(cancelBtn, lt("Cancel"));
     cancelBtn.onclick = function (e) {
       e.preventDefault();
@@ -2471,7 +2899,7 @@
     confirmBtn.href = "#";
     confirmBtn.className = "luatools-btn primary";
     confirmBtn.style.cssText =
-      "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
+      "flex:1;min-width:120px;display:flex;align-items:center;justify-content:center;text-align:center;";
     setButtonLabel(confirmBtn, lt("Confirm"));
     confirmBtn.onclick = function (e) {
       e.preventDefault();
@@ -2509,47 +2937,9 @@
     }, 150);
   }
 
-  // Ensure consistent spacing for our buttons
+  // Button & pill rules now live inside generateThemeStyles() — delegate directly.
   function ensureStyles() {
-    if (!document.getElementById("luatools-spacing-styles")) {
-      const style = document.createElement("style");
-      style.id = "luatools-spacing-styles";
-      style.textContent = `
-                .luatools-restart-button { margin-left: 0 !important; margin-right: 3px !important; }
-                .luatools-button { margin-left: 0 !important; margin-right: 0 !important; position: relative !important; }
-                .luatools-pills-container {
-                    position: absolute !important;
-                    top: -25px !important;
-                    left: 50% !important;
-                    transform: translateX(-50%) !important;
-                    display: inline-flex;
-                    gap: 4px;
-                    align-items: center;
-                    pointer-events: none;
-                    z-index: 10;
-                    white-space: nowrap;
-                }
-                .luatools-pill {
-                    padding: 2px 6px;
-                    border-radius: 4px;
-                    font-size: 9px;
-                    font-weight: 700;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    display: inline-flex;
-                    align-items: center;
-                    height: 16px;
-                    line-height: 1;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                    cursor: default;
-                }
-                .luatools-pill.red { background: rgba(255, 80, 80, 0.15); color: #ff5050; border: 1px solid rgba(255, 80, 80, 0.3); }
-                .luatools-pill.green { background: rgba(92, 184, 92, 0.15); color: #5cb85c; border: 1px solid rgba(92, 184, 92, 0.3); }
-                .luatools-pill.yellow { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
-                .luatools-pill.orange { background: rgba(255, 136, 0, 0.15); color: #ff8800; border: 1px solid rgba(255, 136, 0, 0.3); }
-            `;
-      document.head.appendChild(style); // This is now separate from the main style block
-    }
+    ensureLuaToolsStyles();
   }
 
   // Function to update button text with current translations
@@ -2659,11 +3049,9 @@
       img.style.width = "18px";
       img.style.verticalAlign = "middle";
 
-      // Cogwheel fallback. innerHTML stays here on purpose: the markup is a static SVG
-      // literal with no interpolation, and building it node-by-node needs createElementNS.
+      // Cogwheel fallback via shared inline SVG icon utility when icon data URL is unavailable.
       function useCogwheelIcon() {
-        headerBtn.innerHTML =
-          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="LuaTools"><path fill="currentColor" d="M12 8a4 4 0 100 8 4 4 0 000-8zm9.94 3.06l-2.12-.35a7.962 7.962 0 00-1.02-2.46l1.29-1.72a.75.75 0 00-.09-.97l-1.41-1.41a.75.75 0 00-.97-.09l-1.72 1.29c-.77-.44-1.6-.78-2.46-1.02L13.06 2.06A.75.75 0 0012.31 2h-1.62a.75.75 0 00-.75.65l-.35 2.12a7.962 7.962 0 00-2.46 1.02L5 4.6a.75.75 0 00-.97.09L2.62 6.1a.75.75 0 00-.09.97l1.29 1.72c-.44.77-.78 1.6-1.02 2.46l-2.12.35a.75.75 0 00-.65.75v1.62c0 .37.27.69.63.75l2.14.36c.24.86.58 1.69 1.02 2.46L2.53 18a.75.75 0 00.09.97l1.41 1.41c.26.26.67.29.97.09l1.72-1.29c.77.44 1.6.78 2.46 1.02l.35 2.12c.06.36.38.63.75.63h1.62c.37 0 .69-.27.75-.63l.36-2.14c.86-.24 1.69-.58 2.46-1.02l1.72 1.29c.3.2.71.17.97-.09l1.41-1.41c.26-.26.29-.67.09-.97l-1.29-1.72c.44-.77.78-1.6 1.02-2.46l2.12-.35c.36-.06.63-.38.63-.75v-1.62a.75.75 0 00-.65-.75z"/></svg>';
+        headerBtn.replaceChildren(ltIcon("settings", "", 17));
       }
       img.onerror = useCogwheelIcon;
 
@@ -3188,43 +3576,18 @@
 
         // Only show visual hint in Big Picture mode
         if (window.__LUATOOLS_IS_BIG_PICTURE__) {
+          ensureLuaToolsStyles();
           const hint = document.createElement("div");
           hint.id = "luatools-gamepad-hint";
-          hint.textContent = "🎮 " + lt("bigpicture.mouseTip");
-          const hintColors = getThemeColors();
-          hint.style.cssText =
-            "position: fixed;" +
-            "bottom: 20px;" +
-            "right: 20px;" +
-            "background: " + hintColors.bgTertiary + ";" +
-            "color: " + hintColors.accent + ";" +
-            "padding: 12px 16px;" +
-            "border-radius: 8px;" +
-            "font-size: 14px;" +
-            "z-index: 99998;" +
-            "border: 1px solid " + hintColors.borderRgba + ";" +
-            "box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);" +
-            "animation: fadeInOut 3s ease-in-out;";
-
-          // Add CSS animation if not already present
-          if (!document.querySelector("#luatools-gamepad-hint-styles")) {
-            const style = document.createElement("style");
-            style.id = "luatools-gamepad-hint-styles";
-            style.textContent =
-              "\
-                            @keyframes fadeInOut {\
-                                0% { opacity: 0; transform: translateY(10px); }\
-                                10% { opacity: 1; transform: translateY(0); }\
-                                90% { opacity: 1; transform: translateY(0); }\
-                                100% { opacity: 0; transform: translateY(10px); }\
-                            }\
-                        ";
-            document.head.appendChild(style);
-          }
+          hint.setAttribute("role", "status");
+          hint.setAttribute("aria-live", "polite");
+          hint.style.cssText = "display:flex;align-items:center;gap:10px;";
+          hint.appendChild(ltIcon("info", "", 16));
+          hint.appendChild(ltLabel(lt("bigpicture.mouseTip")));
 
           document.body.appendChild(hint);
 
-          // Auto-remove after animation
+          // Auto-remove after display window
           setTimeout(function () {
             if (hint && hint.parentElement) {
               hint.remove();
@@ -3436,48 +3799,86 @@
   function showLoadedAppsPopup(apps) {
     // Avoid duplicates
     if (document.querySelector(".luatools-loadedapps-overlay")) return;
-    ensureFontAwesome();
     ensureLuaToolsStyles();
+    const loadedColors = getThemeColors();
+
     const overlay = document.createElement("div");
     overlay.className = "luatools-loadedapps-overlay";
-    overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;";
+
     const modal = document.createElement("div");
-    const loadedAppsModalColors = getThemeColors();
-    modal.style.cssText = `background:${loadedAppsModalColors.modalBg};color:${loadedAppsModalColors.text};border:2px solid ${loadedAppsModalColors.border};border-radius:8px;width:560px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${loadedAppsModalColors.shadowRgba};animation:slideUp 0.1s ease-out;`;
+    modal.className = "lt-modal";
+    modal.style.setProperty("--lt-modal-w", "500px");
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "lt-added-title");
+
+    const header = document.createElement("div");
+    header.className = "lt-modal-header";
+
     const title = document.createElement("div");
-    const loadedAppsTitleColors = getThemeColors();
-    title.style.cssText = `font-size:24px;color:${loadedAppsTitleColors.text};margin-bottom:20px;font-weight:700;text-shadow:0 2px 8px ${loadedAppsTitleColors.shadow};background:${loadedAppsTitleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;`;
-    title.textContent = lt("LuaTools · Added Games");
+    title.className = "lt-modal-title";
+    title.id = "lt-added-title";
+    title.appendChild(ltIcon("check", "color:" + loadedColors.accent + ";", 20));
+    title.appendChild(
+      ltLabel(
+        lt("LuaTools · Added Games"),
+        "background:" +
+          loadedColors.gradientLight +
+          ";-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:700;",
+      ),
+    );
+
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "lt-icon-btn";
+    closeBtn.title = lt("Close");
+    closeBtn.setAttribute("aria-label", lt("Close"));
+    closeBtn.appendChild(ltIcon("close", "", 16));
+    closeBtn.onclick = function (e) {
+      e.preventDefault();
+      overlay.remove();
+    };
+
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+
     const body = document.createElement("div");
-    const loadedAppsBodyColors = getThemeColors();
-    body.style.cssText = `font-size:14px;line-height:1.8;margin-bottom:16px;max-height:320px;overflow:auto;padding:16px;border:1px solid ${loadedAppsBodyColors.border};border-radius:12px;background:${loadedAppsBodyColors.bgContainer};`;
+    body.className = "lt-apps-list";
     if (apps && apps.length) {
-      const list = document.createElement("div");
       apps.forEach(function (item) {
         // Backend sends [{appid, name}], but tolerate a bare appid number too so a missing
         // name never renders as literal "undefined".
         const appid = item && typeof item === "object" ? item.appid : item;
         const name = item && typeof item === "object" ? item.name : null;
         const a = document.createElement("a");
+        a.className = "lt-app-link";
         a.href = "steam://install/" + String(appid);
-        a.textContent = String(name || appid);
-        const linkColors = getThemeColors();
-        a.style.cssText = `display:block;color:${linkColors.textSecondary};text-decoration:none;padding:10px 16px;margin-bottom:8px;background:rgba(${linkColors.rgbString},0.08);border:1px solid rgba(${linkColors.rgbString},0.2);border-radius:4px;transition:all 0.3s ease;`;
-        a.onmouseover = function () {
-          const c = getThemeColors();
-          this.style.background = `rgba(${c.rgbString},0.2)`;
-          this.style.borderColor = c.accent;
-          this.style.transform = "translateX(4px)";
-          this.style.color = c.text;
-        };
-        a.onmouseout = function () {
-          const c = getThemeColors();
-          this.style.background = `rgba(${c.rgbString},0.08)`;
-          this.style.borderColor = `rgba(${c.rgbString},0.2)`;
-          this.style.transform = "translateX(0)";
-          this.style.color = c.textSecondary;
-        };
+
+        const leftWrap = document.createElement("span");
+        leftWrap.style.cssText =
+          "display:inline-flex;align-items:center;gap:10px;min-width:0;";
+        leftWrap.appendChild(
+          ltIcon("download", "color:" + loadedColors.accent + ";", 15),
+        );
+        leftWrap.appendChild(
+          ltLabel(
+            String(name || appid),
+            "overflow:hidden;text-overflow:ellipsis;",
+          ),
+        );
+        a.appendChild(leftWrap);
+
+        if (name && appid != null) {
+          a.appendChild(
+            ltLabel(
+              "#" + String(appid),
+              "font-size:11px;color:" +
+                loadedColors.textSecondary +
+                ";opacity:0.72;font-variant-numeric:tabular-nums;flex-shrink:0;",
+            ),
+          );
+        }
+
         a.onclick = function (e) {
           e.preventDefault();
           try {
@@ -3494,23 +3895,26 @@
             });
           } catch (_) {}
         };
-        list.appendChild(a);
+        body.appendChild(a);
       });
-      body.appendChild(list);
     } else {
       body.style.textAlign = "center";
+      body.style.color = loadedColors.textSecondary;
       body.textContent = lt("No games found.");
     }
+
     const btnRow = document.createElement("div");
-    btnRow.style.cssText =
-      "margin-top:16px;display:flex;gap:8px;justify-content:space-between;align-items:center;";
+    btnRow.className = "lt-apps-footer";
+
     const instructionText = document.createElement("div");
-    instructionText.style.cssText = `font-size:12px;color:${getThemeColors().textSecondary};`;
+    instructionText.style.cssText =
+      "font-size:12px;color:" + loadedColors.textSecondary + ";";
     instructionText.textContent = lt(
       "Left click to install, Right click for SteamDB",
     );
+
     const dismissBtn = document.createElement("a");
-    dismissBtn.className = "luatools-btn";
+    dismissBtn.className = "luatools-btn primary";
     setButtonLabel(dismissBtn, lt("Dismiss"));
     dismissBtn.href = "#";
     dismissBtn.onclick = function (e) {
@@ -3525,9 +3929,10 @@
       } catch (_) {}
       overlay.remove();
     };
+
     btnRow.appendChild(instructionText);
     btnRow.appendChild(dismissBtn);
-    modal.appendChild(title);
+    modal.appendChild(header);
     modal.appendChild(body);
     modal.appendChild(btnRow);
     overlay.appendChild(modal);
