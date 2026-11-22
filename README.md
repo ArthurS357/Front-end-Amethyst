@@ -2,7 +2,7 @@
 
 Fork do plugin frontend injetado na Steam Store, parte do ecossistema **LuaTools Amethyst**. Este repositório entrega apenas a camada frontend/backend-relay do plugin (`public/` + `backend/` + `plugin.json`); o app desktop LuaTools é o backend real.
 
-**Versão do fork:** `v1.3.0` (tags Git — veja [Bump de versão](#bump-de-versão)).
+**Versão do fork:** `v1.4.0` (tag Git + `plugin.json` — veja [Bump de versão](#bump-de-versão)).
 
 ## Estado atual
 
@@ -21,10 +21,10 @@ Principais correções e melhorias aplicadas nos últimos commits:
 
 ### Pendências conhecidas
 
-- **Handlers Lua ausentes:** `luatools.js` chama `OpenExternalUrl` e `CheckForUpdatesNow` via `Millennium.callServerMethod`, mas [`backend/main.lua`](backend/main.lua) não define essas funções globais. O botão do Discord e a checagem manual de updates falham silenciosamente.
+- **Handlers Lua ausentes (só Millennium):** [`backend/main.lua`](backend/main.lua) não define `OpenExternalUrl` nem `CheckForUpdatesNow`. No modo LTSP essas chamadas passam pela ponte CDP do app e funcionam, e desde a `v1.4.0` um app fechado gera um alerta localizado em vez de falhar em silêncio.
 - **Sistema de temas inerte:** `public/themes/themes.json` define 11 temas, mas apenas `original` é aplicado no modo LTSP — os outros 10 estão presentes no bundle sem forma conhecida de serem selecionados.
 - **Assets possivelmente mortos:** `public/themes/`, `public/luatools-icon.png` e `public/steamdb-webkit.css` aguardam confirmação de uso real no modo LuaLoader antes de serem removidos.
-- **56 erros `TS2339`** no typecheck — backlog de tipagem (o bundle é JS puro checado via `// @ts-check`; `types/millennium.d.ts` ainda não cobre toda a API). Sem impacto em runtime.
+- **63 erros `TS2339`** no typecheck (56 até a `v1.3.0`; +7 da `v1.4.0`: `_timedOut`, `.focus` e `.dataset` em `Element`) — backlog de tipagem (o bundle é JS puro checado via `// @ts-check`; `types/millennium.d.ts` ainda não cobre toda a API). Sem impacto em runtime.
 
 ## Estrutura do repositório
 
@@ -73,19 +73,20 @@ Copie `public/luatools.js` (e `steamdb-webkit.css`, se alterado) diretamente par
 
 ```bash
 node --check public/luatools.js        # sintaxe JS
-npx tsc --noEmit -p tsconfig.json       # typecheck (56 erros TS2339 conhecidos, ver Pendências)
+npx tsc --noEmit -p tsconfig.json       # typecheck (63 erros TS2339 conhecidos, ver Pendências)
 npm run verify                          # roda os dois acima em sequência
 ```
 
 ## Bump de versão
 
-O `plugin.json` mantém o `version` herdado do LuaTools upstream (`9.0.1`) e não é alterado por este fork. O versionamento deste fork é feito via **tag Git**:
+A partir da `v1.4.0`, o campo `version` do `plugin.json` acompanha a versão do fork. Até a `v1.3.0` ele mantinha o `9.0.1` herdado do LuaTools upstream. A tag Git continua sendo a referência de release: o updater do app desktop compara as tags (`install-manifest.json`), não esse campo. Em cada release, atualize os dois juntos:
 
 - `v1.0.0` — commit inicial do fork.
 - `v1.1.0` — melhorias visuais e correções listadas em [Estado atual](#estado-atual).
 - `v1.2.0` — visual Amethyst (roxo suave) aplicado ao tema padrão.
 - `v1.2.1` — restaura ícone do header na Store Home após atualização da Steam (novo seletor React `v7menu` e guardas de DOM).
 - `v1.3.0` — overhaul de UI/UX (glassmorphism, Design System Amethyst, SVGs inline sem CDN externo, responsividade e acessibilidade).
+- `v1.4.0` — detecção de Denuvo com callout e "Ver fixes", estado de erro quando o app desktop não responde, alertas localizados em update/links/fixes, pill AppID copiável, patch de locale PT-BR/PT e `plugin.json` em `1.4.0`.
 
 ## Licença
 
