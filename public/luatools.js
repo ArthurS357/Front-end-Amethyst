@@ -328,7 +328,10 @@
         break;
 
       case CONFIG.buttonMap.B:
-        // B button disabled - users should use modal buttons
+        // B stays disabled on purpose. In Big Picture Steam handles B natively as "Back", outside
+        // the DOM: blockSteamNavigation() can only swallow the Escape/Backspace it may synthesize,
+        // not the native Back. Closing the modal on B would race that Back and navigate the store
+        // page underneath. Users close via the modal buttons (A on Cancel/Close).
         break;
 
       case CONFIG.buttonMap.DPAD_UP:
@@ -575,12 +578,31 @@
     "zh-CN": "{\"Add via LuaTools\":\"通过LuaTools添加\",\"Advanced\":\"高级\",\"All-In-One Fixes\":\"一体化修复\",\"Apply\":\"应用\",\"Applying {fix}\":\"正在应用{fix}\",\"Are you sure you want to un-fix? This will remove fix files and verify game files.\":\"确定要取消修复吗？这将删除修复文件并验证游戏文件。\",\"Are you sure?\":\"确定吗？\",\"Back\":\"返回\",\"Base Game\":\"基础游戏\",\"Cancel\":\"取消\",\"Cancellation failed\":\"取消失败\",\"Cancelled\":\"已取消\",\"Cancelled by user\":\"用户已取消\",\"Cancelled: {reason}\":\"已取消：{reason}\",\"Cancelling...\":\"正在取消...\",\"Check for updates\":\"检查更新\",\"Checking availability…\":\"正在检查可用性…\",\"Checking content…\":\"正在检查内容…\",\"Checking generic fix...\":\"正在检查通用修复...\",\"Checking key...\":\"正在验证密钥...\",\"Checking online-fix...\":\"正在检查在线修复...\",\"Checking…\":\"检查中…\",\"Close\":\"关闭\",\"Confirm\":\"确认\",\"Content details =>\":\"内容详情 =>\",\"DLC Detected\":\"检测到DLC\",\"DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>\":\"DLC与基础游戏一起添加。要为此DLC添加修复，请前往基础游戏页面：<br><br><b>{gameName}</b>\",\"Discord\":\"Discord\",\"Dismiss\":\"关闭\",\"Dlc: \":\"DLC: \",\"Downloading...\":\"正在下载...\",\"Downloading: {percent}%\":\"下载中：{percent}%\",\"Downloading…\":\"正在下载…\",\"Error applying fix\":\"应用修复错误\",\"Error checking for fixes\":\"检查修复错误\",\"Error starting Online Fix\":\"启动在线修复错误\",\"Error starting un-fix\":\"启动取消修复错误\",\"Error! Code: {code}\":\"错误！代码：{code}\",\"Error, Code: {code}\":\"错误，代码：{code}\",\"Error, Timed Out\":\"错误，超时\",\"Error: {error}\":\"错误: {error}\",\"Expires\":\"到期\",\"Extracting to game folder...\":\"正在解压到游戏文件夹...\",\"Failed\":\"失败\",\"Failed to cancel fix download\":\"取消修复下载失败\",\"Failed to check for fixes.\":\"检查修复失败。\",\"Failed to load free APIs.\":\"加载免费API失败。\",\"Failed to start fix download\":\"启动修复下载失败\",\"Failed to start un-fix\":\"启动取消修复失败\",\"Failed to verify key\":\"密钥验证失败\",\"Failed: {error}\":\"失败：{error}\",\"Fetch Free API's\":\"获取免费API\",\"Fetching game name...\":\"正在获取游戏名称...\",\"Finishing…\":\"正在完成…\",\"Fixes Menu\":\"修复菜单\",\"Found\":\"已找到\",\"Game Added!\":\"游戏已添加！\",\"Game added!\":\"游戏已添加！\",\"Game folder\":\"游戏文件夹\",\"Game install path not found\":\"找不到游戏安装路径\",\"Game not found on any available API.\":\"在任何可用的 API 上都找不到游戏。\",\"Generic Fix\":\"通用修复\",\"Generic fix found!\":\"找到通用修复！\",\"Go to Base Game\":\"前往基础游戏\",\"Hide\":\"隐藏\",\"Included\":\"已包含\",\"Initializing download...\":\"正在初始化下载...\",\"Installing…\":\"正在安装…\",\"Invalid Morrenus API Key format\":\"Morrenus API密钥格式无效\",\"Invalid key format\":\"密钥格式无效\",\"Invalid or rejected key\":\"无效或被拒绝的密钥\",\"Join the Discord!\":\"加入Discord！\",\"Left click to install, Right click for SteamDB\":\"左键点击安装，右键点击SteamDB\",\"Loaded free APIs: {count}\":\"已加载免费API：{count}\",\"Loading APIs...\":\"正在加载 API...\",\"Loading fixes...\":\"正在加载修复...\",\"Look for Fixes\":\"查找修复\",\"LuaTools backend unavailable\":\"LuaTools后端不可用\",\"LuaTools · AIO Fixes Menu\":\"LuaTools · 一体化修复菜单\",\"LuaTools · Added Games\":\"LuaTools · 已添加游戏\",\"LuaTools · Fixes Menu\":\"LuaTools · 修复菜单\",\"LuaTools · Menu\":\"LuaTools · 菜单\",\"LuaTools · {api}\":\"LuaTools · {api}\",\"Manage Game\":\"管理游戏\",\"Missing\":\"缺失\",\"No games found.\":\"未找到游戏。\",\"No generic fix\":\"无通用修复\",\"No online-fix\":\"无在线修复\",\"No updates available.\":\"没有可用更新。\",\"No workshop for the game\":\"该游戏没有创意工坊\",\"Not found\":\"未找到\",\"Online Fix\":\"在线修复\",\"Online Fix (Unsteam)\":\"在线修复（非Steam）\",\"Online-fix found!\":\"找到在线修复！\",\"Only possible thanks to {name} 💜\":\"仅感谢{name} 💜\",\"Proceed\":\"继续\",\"Processing package…\":\"正在处理包…\",\"Remove via LuaTools\":\"通过LuaTools移除\",\"Removed {count} files. Running Steam verification...\":\"已删除{count}个文件。正在运行Steam验证...\",\"Removing fix files...\":\"正在删除修复文件...\",\"Restart Steam\":\"重启Steam\",\"Restart Steam now?\":\"现在重启Steam吗？\",\"Searching across sources...\":\"跨源搜索中...\",\"Select Download Source\":\"选择下载源\",\"Settings\":\"设置\",\"Skipped\":\"已跳过\",\"The game has been added successfully.\":\"游戏已成功添加。\",\"This game may not work, support for it wont be given in our discord\":\"此游戏可能无法运行，我们的 discord 将不提供支持\",\"Un-Fix (verify game)\":\"取消修复（验证游戏）\",\"Un-Fixing game\":\"正在取消修复游戏\",\"Unknown Game\":\"未知游戏\",\"Unknown error\":\"未知错误\",\"Usage\":\"用量\",\"Verifying API limits...\":\"正在验证API限制...\",\"Waiting…\":\"等待中…\",\"Working…\":\"处理中…\",\"Workshop: \":\"创意工坊: \",\"You have exceeded your daily download limit. Please wait until tomorrow for more uses, or upgrade your plan on the Morrenus website.\":\"您已超过每日下载限制。请等到明天再使用，或在Morrenus网站上升级您的计划。\",\"Your Morrenus API key is invalid or expired. Please check your key in the settings or regenerate it on the Morrenus website.\":\"您的Morrenus API密钥无效或已过期。请在设置中检查您的密钥或在Morrenus网站上重新生成。\",\"bigpicture.mouseTip\":\"在Steam中使用鼠标模式：Guide键 + 右摇杆，RB点击\",\"common.alert.ok\":\"确定\",\"common.appName\":\"LuaTools\",\"common.error.unsupportedOption\":\"不支持的操作类型: {type}\",\"common.status.error\":\"错误\",\"common.status.loading\":\"加载中...\",\"common.status.success\":\"成功\",\"common.translationMissing\":\"缺少翻译\",\"common.warning\":\"警告\",\"days left\":\"天剩余\",\"disclaimer.inputLabel\":\"在下面的框中输入\\\"我理解\\\"以继续\",\"disclaimer.inputPlaceholder\":\"我理解\",\"disclaimer.line1\":\"LuaTools与Millennium没有任何关联\",\"disclaimer.line2\":\"Millennium不会在其discord服务器上为您提供此插件的支持\",\"disclaimer.line3\":\"如果您去他们的discord寻求帮助，您将被LuaTools和Millennium服务器封禁\",\"disclaimer.title\":\"重要通知\",\"gameStatus.denuvo\":\"Denuvo\",\"gameStatus.needsFixes\":\"有可用修复\",\"gameStatus.playable\":\"可玩\",\"gameStatus.unplayable\":\"不可玩\",\"menu.advancedLabel\":\"高级\",\"menu.checkForUpdates\":\"检查更新\",\"menu.discord\":\"Discord\",\"menu.error.getPath\":\"获取游戏路径错误\",\"menu.error.noAppId\":\"无法确定游戏AppID\",\"menu.error.noInstall\":\"找不到游戏安装\",\"menu.error.notInstalled\":\"游戏未安装！请先添加并安装 :D\",\"menu.fetchFreeApis\":\"获取免费API\",\"menu.fixesMenu\":\"修复菜单\",\"menu.joinDiscordLabel\":\"加入Discord！\",\"menu.manageGameLabel\":\"管理游戏\",\"menu.remove.confirm\":\"确定要为该游戏通过LuaTools移除吗？\",\"menu.remove.failure\":\"移除LuaTools失败。\",\"menu.remove.success\":\"已为该应用程序移除LuaTools。\",\"menu.removeLuaTools\":\"通过LuaTools移除\",\"menu.settings\":\"设置\",\"menu.title\":\"LuaTools · 菜单\",\"settings.close\":\"关闭\",\"settings.donateKeys.description\":\"捐赠游戏解密密钥，帮助所有人！\",\"settings.donateKeys.label\":\"捐赠密钥\",\"settings.donateKeys.no\":\"否\",\"settings.donateKeys.yes\":\"是\",\"settings.empty\":\"暂无设置。\",\"settings.error\":\"加载设置失败。\",\"settings.fastDownload.description\":\"添加游戏时自动选择第一个可用源。\",\"settings.fastDownload.label\":\"快速下载\",\"settings.general\":\"通用\",\"settings.generalDescription\":\"LuaTools全局偏好设置。\",\"settings.installedFixes.date\":\"安装时间：\",\"settings.installedFixes.delete\":\"删除\",\"settings.installedFixes.deleteConfirm\":\"您确定要删除此修复吗？这将删除修复文件并运行Steam验证。\",\"settings.installedFixes.deleteError\":\"删除修复失败。\",\"settings.installedFixes.deleteSuccess\":\"修复删除成功！\",\"settings.installedFixes.deleting\":\"正在删除修复...\",\"settings.installedFixes.empty\":\"尚未安装任何修复。\",\"settings.installedFixes.error\":\"加载已安装的修复失败。\",\"settings.installedFixes.files\":\"{count} 个文件\",\"settings.installedFixes.loading\":\"正在扫描已安装的修复...\",\"settings.installedFixes.title\":\"已安装的修复\",\"settings.installedFixes.type\":\"类型：\",\"settings.installedLua.delete\":\"删除\",\"settings.installedLua.deleteConfirm\":\"是否通过LuaTools删除此游戏？\",\"settings.installedLua.deleteError\":\"通过LuaTools删除失败。\",\"settings.installedLua.deleteSuccess\":\"通过LuaTools删除成功！\",\"settings.installedLua.deleting\":\"正在通过LuaTools删除...\",\"settings.installedLua.disabled\":\"已禁用\",\"settings.installedLua.empty\":\"尚未安装任何Lua脚本。\",\"settings.installedLua.error\":\"加载已安装的Lua脚本失败。\",\"settings.installedLua.loading\":\"正在扫描已安装的Lua脚本...\",\"settings.installedLua.modified\":\"修改时间：\",\"settings.installedLua.title\":\"通过LuaTools安装的游戏\",\"settings.installedLua.unknownInfo\":\"显示'未知游戏'的游戏是从外部来源安装的（不是通过LuaTools）。\",\"settings.language.description\":\"选择LuaTools使用的语言。\",\"settings.language.label\":\"语言\",\"settings.language.option.en\":\"英语\",\"settings.language.option.pt-BR\":\"巴西葡萄牙语\",\"settings.loading\":\"正在加载设置...\",\"settings.noChanges\":\"没有要保存的更改。\",\"settings.refresh\":\"刷新\",\"settings.refreshing\":\"正在刷新...\",\"settings.save\":\"保存设置\",\"settings.saveError\":\"保存设置失败。\",\"settings.saveSuccess\":\"设置保存成功。\",\"settings.saving\":\"正在保存...\",\"settings.search.clear\":\"清除搜索\",\"settings.search.noResults\":\"未找到结果\",\"settings.search.placeholder\":\"搜索设置、游戏、修复...\",\"settings.theme.description\":\"选择 LuaTools 界面的颜色主题。\",\"settings.theme.label\":\"主题\",\"settings.title\":\"LuaTools · 设置\",\"settings.unsaved\":\"未保存的更改\",\"settings.useSteamLanguage.description\":\"使用 Steam 客户端语言而不是 LuaTools 设置的语言。\",\"settings.useSteamLanguage.label\":\"使用 Steam 语言\",\"settings.useSteamLanguage.no\":\"否\",\"settings.useSteamLanguage.yes\":\"是\",\"{fix} applied successfully!\":\"{fix}已成功应用！\",\"settings.morrenusApiKey.label\":\"Morrenus API 密钥\",\"settings.morrenusApiKey.description\":\"使用 Sadie Source 需要 API 密钥。从 {link} 获取\",\"settings.morrenusApiKey.placeholder\":\"输入您的 API 密钥\"}",
     "zh-TW": "{\"Add via LuaTools\":\"透過 LuaTools 新增\",\"Advanced\":\"進階\",\"All-In-One Fixes\":\"一鍵修復\",\"Apply\":\"套用\",\"Applying {fix}\":\"正在套用 {fix}\",\"Are you sure you want to un-fix? This will remove fix files and verify game files.\":\"確定要還原修復嗎？這將會移除修復檔案並驗證遊戲檔案。\",\"Are you sure?\":\"確定嗎？\",\"Back\":\"返回\",\"Base Game\":\"本體遊戲\",\"Cancel\":\"取消\",\"Cancellation failed\":\"取消失敗\",\"Cancelled\":\"已取消\",\"Cancelled by user\":\"已被使用者取消\",\"Cancelled: {reason}\":\"已取消：{reason}\",\"Cancelling...\":\"正在取消...\",\"Check for updates\":\"檢查更新\",\"Checking availability…\":\"正在檢查可用性…\",\"Checking content…\":\"正在檢查內容…\",\"Checking generic fix...\":\"正在檢查通用修復...\",\"Checking key...\":\"正在驗證金鑰...\",\"Checking online-fix...\":\"正在檢查 online-fix...\",\"Checking…\":\"正在檢查…\",\"Close\":\"關閉\",\"Confirm\":\"確認\",\"Content details =>\":\"內容詳情 =>\",\"DLC Detected\":\"偵測到 DLC\",\"DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>\":\"DLC 會與本體遊戲一起新增。若要為此 DLC 新增修復，請前往本體遊戲頁面：<br><br><b>{gameName}</b>\",\"Discord\":\"Discord\",\"Dismiss\":\"關閉\",\"Dlc: \":\"DLC: \",\"Downloading...\":\"正在下載...\",\"Downloading: {percent}%\":\"正在下載：{percent}%\",\"Downloading…\":\"正在下載…\",\"Error applying fix\":\"套用修復時發生錯誤\",\"Error checking for fixes\":\"檢查修復時發生錯誤\",\"Error starting Online Fix\":\"啟動 Online Fix 時發生錯誤\",\"Error starting un-fix\":\"啟動還原修復時發生錯誤\",\"Error! Code: {code}\":\"錯誤！代碼：{code}\",\"Error, Code: {code}\":\"錯誤，代碼：{code}\",\"Error, Timed Out\":\"錯誤，連線逾時\",\"Error: {error}\":\"錯誤: {error}\",\"Expires\":\"到期\",\"Extracting to game folder...\":\"正在解壓縮至遊戲資料夾...\",\"Failed\":\"失敗\",\"Failed to cancel fix download\":\"無法取消修復下載\",\"Failed to check for fixes.\":\"無法檢查修復。\",\"Failed to load free APIs.\":\"無法載入免費 API。\",\"Failed to start fix download\":\"無法開始下載修復\",\"Failed to start un-fix\":\"無法開始還原修復\",\"Failed to verify key\":\"金鑰驗證失敗\",\"Failed: {error}\":\"失敗：{error}\",\"Fetch Free API's\":\"取得免費 API\",\"Fetching game name...\":\"正在取得遊戲名稱...\",\"Finishing…\":\"即將完成…\",\"Fixes Menu\":\"修復選單\",\"Found\":\"已找到\",\"Game Added!\":\"遊戲已新增！\",\"Game added!\":\"遊戲已新增！\",\"Game folder\":\"遊戲資料夾\",\"Game install path not found\":\"找不到遊戲安裝路徑\",\"Game not found on any available API.\":\"在任何可用的 API 上都找不到遊戲。\",\"Generic Fix\":\"通用修復\",\"Generic fix found!\":\"已找到通用修復！\",\"Go to Base Game\":\"前往本體遊戲\",\"Hide\":\"隱藏\",\"Included\":\"已包含\",\"Initializing download...\":\"正在初始化下載...\",\"Installing…\":\"正在安裝…\",\"Invalid Morrenus API Key format\":\"Morrenus API金鑰格式無效\",\"Invalid key format\":\"金鑰格式無效\",\"Invalid or rejected key\":\"無效或被拒絕的金鑰\",\"Join the Discord!\":\"加入 Discord！\",\"Left click to install, Right click for SteamDB\":\"左鍵安裝，右鍵開啟 SteamDB\",\"Loaded free APIs: {count}\":\"已載入免費 API：{count}\",\"Loading APIs...\":\"正在載入 API...\",\"Loading fixes...\":\"正在載入修復...\",\"Look for Fixes\":\"搜尋修復\",\"LuaTools backend unavailable\":\"LuaTools 後端無法使用\",\"LuaTools · AIO Fixes Menu\":\"LuaTools · 一鍵修復選單\",\"LuaTools · Added Games\":\"LuaTools · 已新增的遊戲\",\"LuaTools · Fixes Menu\":\"LuaTools · 修復選單\",\"LuaTools · Menu\":\"LuaTools · 選單\",\"LuaTools · {api}\":\"LuaTools · {api}\",\"Manage Game\":\"管理遊戲\",\"Missing\":\"缺少\",\"No games found.\":\"找不到任何遊戲。\",\"No generic fix\":\"沒有通用修復\",\"No online-fix\":\"沒有 online-fix\",\"No updates available.\":\"沒有可用的更新。\",\"No workshop for the game\":\"此遊戲沒有創意工坊\",\"Not found\":\"未找到\",\"Online Fix\":\"線上修復\",\"Online Fix (Unsteam)\":\"Online Fix (Unsteam)\",\"Online-fix found!\":\"已找到 Online-fix！\",\"Only possible thanks to {name} 💜\":\"感謝 {name} 才能實現 💜\",\"Proceed\":\"繼續\",\"Processing package…\":\"正在處理套件…\",\"Remove via LuaTools\":\"透過 LuaTools 移除\",\"Removed {count} files. Running Steam verification...\":\"已移除 {count} 個檔案。正在執行 Steam 驗證...\",\"Removing fix files...\":\"正在移除修復檔案...\",\"Restart Steam\":\"重新啟動 Steam\",\"Restart Steam now?\":\"現在要重新啟動 Steam 嗎？\",\"Searching across sources...\":\"跨來源搜尋中...\",\"Select Download Source\":\"選擇下載源\",\"Settings\":\"設定\",\"Skipped\":\"已略過\",\"The game has been added successfully.\":\"遊戲已成功新增。\",\"This game may not work, support for it wont be given in our discord\":\"此遊戲可能無法運行，我們的 discord 將不提供支持\",\"Un-Fix (verify game)\":\"還原修復（驗證遊戲）\",\"Un-Fixing game\":\"正在還原遊戲修復\",\"Unknown Game\":\"未知遊戲\",\"Unknown error\":\"未知錯誤\",\"Usage\":\"用量\",\"Verifying API limits...\":\"正在驗證API限制...\",\"Waiting…\":\"等待中…\",\"Working…\":\"處理中…\",\"Workshop: \":\"創意工坊: \",\"You have exceeded your daily download limit. Please wait until tomorrow for more uses, or upgrade your plan on the Morrenus website.\":\"您已超過每日下載限制。請等到明天再使用，或在Morrenus網站上升級您的方案。\",\"Your Morrenus API key is invalid or expired. Please check your key in the settings or regenerate it on the Morrenus website.\":\"您的Morrenus API金鑰無效或已過期。請在設定中檢查您的金鑰或在Morrenus網站上重新產生。\",\"bigpicture.mouseTip\":\"在 Steam 中使用滑鼠模式：Guide 鍵 + 右搖桿，按 RB 點擊\",\"common.alert.ok\":\"OK\",\"common.appName\":\"LuaTools\",\"common.error.unsupportedOption\":\"不支援的選項類型：{type}\",\"common.status.error\":\"錯誤\",\"common.status.loading\":\"載入中...\",\"common.status.success\":\"成功\",\"common.translationMissing\":\"缺少翻譯\",\"common.warning\":\"警告\",\"days left\":\"天剩餘\",\"disclaimer.inputLabel\":\"在下方輸入框中輸入「我了解」以繼續\",\"disclaimer.inputPlaceholder\":\"我了解\",\"disclaimer.line1\":\"LuaTools 與 Millennium 沒有任何關聯\",\"disclaimer.line2\":\"Millennium 不會在他們的 Discord 上為此外掛提供支援\",\"disclaimer.line3\":\"如果你在 Millennium 的 Discord 上尋求協助，你將會被兩個伺服器同時封禁\",\"disclaimer.title\":\"重要提醒\",\"gameStatus.denuvo\":\"Denuvo\",\"gameStatus.needsFixes\":\"有可用修復\",\"gameStatus.playable\":\"可遊玩\",\"gameStatus.unplayable\":\"無法遊玩\",\"menu.advancedLabel\":\"進階\",\"menu.checkForUpdates\":\"檢查更新\",\"menu.discord\":\"Discord\",\"menu.error.getPath\":\"取得遊戲路徑時發生錯誤\",\"menu.error.noAppId\":\"無法取得遊戲的 AppID\",\"menu.error.noInstall\":\"找不到已安裝的遊戲\",\"menu.error.notInstalled\":\"遊戲尚未安裝！請先新增並安裝 :D\",\"menu.fetchFreeApis\":\"取得免費 API\",\"menu.fixesMenu\":\"修復選單\",\"menu.joinDiscordLabel\":\"加入 Discord！\",\"menu.manageGameLabel\":\"管理遊戲\",\"menu.remove.confirm\":\"要移除此遊戲的 LuaTools 嗎？\",\"menu.remove.failure\":\"無法移除 LuaTools。\",\"menu.remove.success\":\"已移除此遊戲的 LuaTools。\",\"menu.removeLuaTools\":\"透過 LuaTools 移除遊戲\",\"menu.settings\":\"設定\",\"menu.title\":\"LuaTools · 選單\",\"settings.close\":\"關閉\",\"settings.donateKeys.description\":\"允許 LuaTools 捐贈多餘的 Steam 金鑰。\",\"settings.donateKeys.label\":\"捐贈金鑰\",\"settings.donateKeys.no\":\"否\",\"settings.donateKeys.yes\":\"是\",\"settings.empty\":\"沒有可用的設定。\",\"settings.error\":\"無法載入設定。\",\"settings.fastDownload.description\":\"新增遊戲時自動選擇第一個可用源。\",\"settings.fastDownload.label\":\"快速下載\",\"settings.general\":\"一般\",\"settings.generalDescription\":\"LuaTools 全域偏好設定。\",\"settings.installedFixes.date\":\"安裝時間：\",\"settings.installedFixes.delete\":\"刪除\",\"settings.installedFixes.deleteConfirm\":\"確定要移除此修復嗎？這將會刪除修復檔案並執行 Steam 驗證。\",\"settings.installedFixes.deleteError\":\"無法移除修復。\",\"settings.installedFixes.deleteSuccess\":\"已成功移除修復！\",\"settings.installedFixes.deleting\":\"正在移除修復...\",\"settings.installedFixes.empty\":\"尚未安裝任何修復。\",\"settings.installedFixes.error\":\"無法載入已安裝的修復。\",\"settings.installedFixes.files\":\"{count} 個檔案\",\"settings.installedFixes.loading\":\"正在搜尋已安裝的修復...\",\"settings.installedFixes.title\":\"已安裝的修復\",\"settings.installedFixes.type\":\"類型：\",\"settings.installedLua.delete\":\"移除\",\"settings.installedLua.deleteConfirm\":\"要移除此遊戲的 LuaTools 嗎？\",\"settings.installedLua.deleteError\":\"無法透過 LuaTools 移除。\",\"settings.installedLua.deleteSuccess\":\"已成功透過 LuaTools 移除！\",\"settings.installedLua.deleting\":\"正在透過 LuaTools 移除...\",\"settings.installedLua.disabled\":\"已停用\",\"settings.installedLua.empty\":\"尚未安裝任何 Lua 腳本。\",\"settings.installedLua.error\":\"無法載入已安裝的 Lua 腳本。\",\"settings.installedLua.loading\":\"正在搜尋已安裝的 Lua 腳本...\",\"settings.installedLua.modified\":\"修改時間：\",\"settings.installedLua.title\":\"透過 LuaTools 的遊戲\",\"settings.installedLua.unknownInfo\":\"顯示「未知遊戲」的項目是從外部來源安裝的（非透過 LuaTools）。\",\"settings.language.description\":\"選擇 LuaTools 介面使用的語言。\",\"settings.language.label\":\"語言\",\"settings.language.option.en\":\"英文\",\"settings.language.option.pt-BR\":\"巴西葡萄牙文\",\"settings.loading\":\"正在載入設定...\",\"settings.noChanges\":\"沒有需要儲存的變更。\",\"settings.refresh\":\"重新整理\",\"settings.refreshing\":\"正在重新整理...\",\"settings.save\":\"儲存設定\",\"settings.saveError\":\"無法儲存設定。\",\"settings.saveSuccess\":\"設定已成功儲存。\",\"settings.saving\":\"正在儲存...\",\"settings.search.clear\":\"清除搜尋\",\"settings.search.noResults\":\"找不到任何結果\",\"settings.search.placeholder\":\"搜尋設定、遊戲、修復...\",\"settings.theme.description\":\"選擇 LuaTools 介面的色彩主題。\",\"settings.theme.label\":\"主題\",\"settings.title\":\"LuaTools · 設定\",\"settings.unsaved\":\"有未儲存的變更\",\"settings.useSteamLanguage.description\":\"使用 Steam 用戶端的語言，而非 LuaTools 的設定。\",\"settings.useSteamLanguage.label\":\"使用 Steam 語言\",\"settings.useSteamLanguage.no\":\"否\",\"settings.useSteamLanguage.yes\":\"是\",\"{fix} applied successfully!\":\"{fix} 已成功套用！\",\"settings.morrenusApiKey.label\":\"Morrenus API 金鑰\",\"settings.morrenusApiKey.description\":\"使用 Sadie Source 需要 API 金鑰。從 {link} 取得\",\"settings.morrenusApiKey.placeholder\":\"輸入您的 API 金鑰\"}",
   };
+  // Strings added by the Amethyst fork, kept out of the generated LT_LOCALES blobs above and
+  // merged over the parsed locale. Any other language gets the English fallback passed to t().
+  const LT_LOCALE_PATCH_PT = {
+    "denuvo.callout.title": "Denuvo detectado",
+    "denuvo.callout.body": "Este jogo usa o DRM anti-tamper Denuvo e pode não funcionar depois de adicionado.",
+    "denuvo.callout.fixes": "Ver fixes",
+    "denuvo.callout.fixesAria": "Ver fixes deste jogo no app LuaTools",
+    "app.offline.title": "O app LuaTools não respondeu",
+    "app.offline.body": "Verifique se o app LuaTools está aberto no computador e tente novamente.",
+    "app.error.updates": "Não foi possível verificar atualizações. Verifique se o app LuaTools está aberto e tente novamente.",
+    "app.error.openUrl": "Não foi possível abrir o link. Verifique se o app LuaTools está aberto e tente novamente.",
+    "app.error.openFix": "Não foi possível abrir os fixes. Verifique se o app LuaTools está aberto e tente novamente.",
+    "appid.copy.title": "Clique para copiar",
+    "appid.copy.aria": "Copiar AppID {appid}",
+    "appid.copy.done": "Copiado!",
+    "appid.copy.failed": "Falha ao copiar",
+  };
+  const LT_LOCALE_PATCH = { "pt-BR": LT_LOCALE_PATCH_PT, pt: LT_LOCALE_PATCH_PT };
   const LT_LOCALE_CACHE = {};
   function ltGetLocaleStrings(lang) {
     if (!lang || !LT_LOCALES[lang]) lang = "en";
     if (!LT_LOCALE_CACHE[lang]) {
       try { LT_LOCALE_CACHE[lang] = JSON.parse(LT_LOCALES[lang]); }
       catch (e) { LT_LOCALE_CACHE[lang] = {}; }
+      Object.assign(LT_LOCALE_CACHE[lang], LT_LOCALE_PATCH[lang]);
     }
     return LT_LOCALE_CACHE[lang];
   }
@@ -751,13 +773,42 @@
     }
   }
 
+  // Denuvo detection — DOM-only. "Denuvo" is a proper noun Steam never translates, so a
+  // case-insensitive text match is language-independent (PT-BR, EN, ...). Ordered on purpose:
+  // the DRM notice first, then the purchase area as a structural fallback for when Steam
+  // renames/moves the notice. All matches are scanned (querySelectorAll): a page can carry
+  // several .DRM_notice nodes (3rd-party account, DRM...) and Denuvo is not always the first.
+  // Never scan the whole page: reviews and descriptions mention Denuvo on any game.
+  const DENUVO_SCOPE_SELECTORS = [
+    ".DRM_notice",
+    "#game_area_purchase",
+    ".game_area_purchase_game_wrapper",
+  ];
+
+  function detectDenuvo() {
+    for (let i = 0; i < DENUVO_SCOPE_SELECTORS.length; i++) {
+      let nodes;
+      try {
+        nodes = document.querySelectorAll(DENUVO_SCOPE_SELECTORS[i]);
+      } catch (_) {
+        continue;
+      }
+      for (let j = 0; j < nodes.length; j++) {
+        if (/denuvo/i.test(nodes[j].textContent || "")) {
+          return { isDenuvo: true, via: DENUVO_SCOPE_SELECTORS[i] };
+        }
+      }
+    }
+    return { isDenuvo: false, via: "" };
+  }
+
   // Store-page button is an Add <-> Remove toggle. Mode is tracked on the element
   // via data-lt-mode so the delegated click handler knows which action to run.
   function startLuaToolsAdd(appid, anchor) {
     if (runState.inProgress && runState.appid === appid) return;
     runState.inProgress = true;
     runState.appid = appid;
-    showTestPopup();
+    showTestPopup(appid);
     // Raw fetch() to 127.0.0.1 is blocked as mixed content on this HTTPS store page;
     // route through the CDP bridge (window.Millennium -> CefInjectorService -> HttpClient)
     // instead, which makes the actual HTTP call from the app process, not the browser.
@@ -772,9 +823,14 @@
     let picking = false;
     let renderKey = "";
 
+    // Bind this run to its own popup: a late reply from a cancelled run must not paint (or
+    // "offline"-flag) the popup of a newer run for the same appid.
+    const ownOverlay = document.querySelector(".luatools-overlay");
+    const overlayAlive = function () {
+      return !!(ownOverlay && ownOverlay.isConnected);
+    };
     const q = function (sel) {
-      const o = document.querySelector(".luatools-overlay");
-      return o ? o.querySelector(sel) : null;
+      return overlayAlive() ? ownOverlay.querySelector(sel) : null;
     };
 
     const renderSources = function (sources, clickable) {
@@ -878,22 +934,78 @@
     // availability". Stop any prior poll first, and record this one on runState so cleanup()/cancel — which
     // live in a different scope and can't see `timer` — can stop it too.
     if (runState.pollTimer) { clearInterval(runState.pollTimer); runState.pollTimer = null; }
+
+    // Stop polling and free the store-page Add button. Used when the popup goes away without
+    // finishing (removed from outside by the menu/closeSettingsOverlay) or the app stops answering.
+    const releaseRun = function () {
+      finished = true;
+      clearInterval(timer);
+      if (runState.pollTimer !== null && runState.pollTimer !== timer) return; // a newer run owns runState
+      runState.pollTimer = null;
+      if (runState.appid === appid) {
+        runState.inProgress = false;
+        runState.appid = null;
+      }
+    };
+
+    // App-offline guard. The CDP polyfill never rejects when the desktop app is gone: after ~5 s
+    // each call resolves a bare {success:true}, without the add-status fields. Count those and
+    // rejections; after POLL_MAX_FAILURES in a row, end the spinner and show an error state.
+    const POLL_MAX_FAILURES = 5;
+    let pollFailures = 0;
+    const onPollFailure = function () {
+      if (finished || ++pollFailures < POLL_MAX_FAILURES) return;
+      releaseRun();
+      const titleEl = q(".luatools-title");
+      if (titleEl) {
+        titleEl.replaceChildren(
+          ltIcon("error", "color:" + LT_DESIGN.status.danger + ";", 20),
+          ltLabel(t("app.offline.title", "LuaTools app not responding")),
+        );
+      }
+      const statusEl = q(".luatools-status");
+      if (statusEl) {
+        statusEl.style.color = LT_DESIGN.status.danger;
+        statusEl.textContent = t(
+          "app.offline.body",
+          "Make sure the LuaTools desktop app is open, then try again.",
+        );
+      }
+      const wrap = q(".luatools-progress-wrap");
+      if (wrap) wrap.style.display = "none";
+      // "Close" label → dismiss() just closes (no CancelAddViaLuaTools to an app that isn't there).
+      const hide = q(".luatools-hide-btn");
+      if (hide) {
+        hide.classList.add("primary");
+        setButtonLabel(hide, lt("Close"));
+      }
+    };
+
     const timer = setInterval(function () {
       if (finished) {
         clearInterval(timer);
         runState.pollTimer = null;
         return;
       }
+      if (!overlayAlive()) {
+        // Popup removed from outside without Cancel/Close — stop and unlock the Add button.
+        releaseRun();
+        return;
+      }
       window.Millennium.callServerMethod("luatools", "GetLuaToolsAddStatus", { appid })
         .then(function (st) {
+          if (finished) return; // late reply after success/offline — UI is final
           if (typeof st === "string") st = JSON.parse(st);
-          const overlay = document.querySelector(".luatools-overlay");
-          if (!overlay) {
+          if (!overlayAlive()) {
             // Popup was closed/cancelled out from under us — stop polling so this timer can't leak.
-            clearInterval(timer);
-            runState.pollTimer = null;
+            releaseRun();
             return;
           }
+          if (!st || typeof st !== "object" || Object.keys(st).length <= 1) {
+            onPollFailure(); // bridge timeout: bare {success:true}
+            return;
+          }
+          pollFailures = 0;
           const statusEl = q(".luatools-status");
           const titleEl = q(".luatools-title");
           const wrap = q(".luatools-progress-wrap");
@@ -996,6 +1108,7 @@
         })
         .catch(function (e) {
           backendLog("LuaTools: add-status poll failed for " + appid + ": " + e);
+          onPollFailure();
         });
     }, 350);
     runState.pollTimer = timer;
@@ -1034,6 +1147,10 @@
           try {
             payload = JSON.parse(payload);
           } catch (e) {}
+        }
+        // Accept both the shim/app envelope {success, database} and a bare appid → data map.
+        if (payload && payload.database && typeof payload.database === "object") {
+          payload = payload.database;
         }
         return payload || {};
       })
@@ -1124,6 +1241,8 @@
     lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
     check: '<circle cx="12" cy="12" r="10"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>',
     error: '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>',
+    "shield-alert":
+      '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4M12 16h.01"/>',
     discord:
       '<path fill="currentColor" stroke="none" d="M19.27 5.33C17.94 4.71 16.5 4.26 15 4a.09.09 0 0 0-.07.03c-.18.33-.39.76-.53 1.09a16.09 16.09 0 0 0-4.8 0c-.14-.34-.35-.76-.54-1.09-.01-.02-.04-.03-.07-.03-1.5.26-2.93.71-4.27 1.33-.01 0-.02.01-.03.02-2.72 4.07-3.47 8.03-3.1 11.95 0 .02.01.04.03.05 1.8 1.32 3.53 2.12 5.24 2.65.03.01.06 0 .07-.02.4-.55.76-1.13 1.07-1.74.02-.04 0-.08-.04-.09-.57-.22-1.11-.48-1.64-.78-.04-.02-.04-.08-.01-.11.11-.08.22-.17.33-.25.02-.02.05-.02.07-.01 3.44 1.57 7.15 1.57 10.55 0 .02-.01.05-.01.07.01.11.09.22.17.33.26.04.03.04.09-.01.11-.52.31-1.07.56-1.64.78-.04.01-.05.06-.04.09.32.61.68 1.19 1.07 1.74.03.01.06.02.09.01 1.72-.53 3.45-1.33 5.25-2.65.02-.01.03-.03.03-.05.44-4.53-.73-8.46-3.1-11.95-.01-.01-.02-.02-.04-.02zM8.52 14.91c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12 0 1.17-.84 2.12-1.89 2.12zm6.97 0c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12 0 1.17-.83 2.12-1.89 2.12z"/>',
   });
@@ -1415,6 +1534,86 @@
                 color: ${theme.textSecondary};
                 margin-bottom: 16px;
                 line-height: 1.5;
+            }
+
+            /* Denuvo/DRM callout (add modal) — warning status on the glass surface.
+               Contrast on the modal gradient: title 8.7:1+, body text 13:1+, border 8.7:1+. */
+            .lt-drm-callout {
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                background: rgba(251, 191, 36, 0.1);
+                border: 1px solid rgba(251, 191, 36, 0.3);
+                border-left: 3px solid ${ds.status.warning};
+                padding: 12px 14px;
+                border-radius: ${ds.radius.sm};
+                font-size: 13px;
+                color: ${theme.text};
+                margin-bottom: 16px;
+                line-height: 1.5;
+            }
+            .lt-drm-callout strong {
+                display: block;
+                color: ${ds.status.warning};
+                font-weight: 600;
+                margin-bottom: 2px;
+            }
+
+            /* AppID pill in the modal header */
+            .lt-appid-pill {
+                display: inline-flex;
+                align-items: center;
+                padding: 2px 10px;
+                border-radius: ${ds.radius.pill};
+                font-size: 12px;
+                font-weight: 600;
+                font-variant-numeric: tabular-nums;
+                color: ${theme.accentLight};
+                background: rgba(${rgbString}, 0.14);
+                border: 1px solid rgba(${rgbString}, 0.3);
+                margin: 0;
+                font-family: inherit;
+                line-height: 1.5;
+                cursor: pointer;
+                -webkit-appearance: none;
+                appearance: none;
+                transition: background ${ds.transition}, border-color ${ds.transition}, color ${ds.transition};
+            }
+            /* Copy-on-click. Contrast on the modal: rest 6.29:1, hover 5.26:1, "Copied!" 6.31:1. */
+            .lt-appid-pill:hover {
+                background: rgba(${rgbString}, 0.24);
+                border-color: rgba(${rgbString}, 0.6);
+            }
+            .lt-appid-pill.is-copied {
+                color: ${ds.status.success};
+                background: rgba(74, 222, 128, 0.14);
+                border-color: rgba(74, 222, 128, 0.45);
+            }
+
+            /* "View fixes" action in the Denuvo callout. Text 5.99:1 (hover 5.01:1) and
+               border 3.60:1 (hover 7.11:1) on the callout; focus ring from the shared :focus-visible. */
+            .lt-drm-fixes-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                margin-top: 8px;
+                padding: 5px 14px;
+                font-family: inherit;
+                font-size: 12px;
+                font-weight: 600;
+                line-height: 1.4;
+                color: ${ds.status.warning};
+                background: rgba(251, 191, 36, 0.08);
+                border: 1px solid rgba(251, 191, 36, 0.6);
+                border-radius: ${ds.radius.pill};
+                cursor: pointer;
+                -webkit-appearance: none;
+                appearance: none;
+                transition: background ${ds.transition}, border-color ${ds.transition};
+            }
+            .lt-drm-fixes-btn:hover {
+                background: rgba(251, 191, 36, 0.16);
+                border-color: ${ds.status.warning};
             }
 
             /* Menu action cards */
@@ -1856,6 +2055,7 @@
                 letter-spacing: 0.5px;
                 display: inline-flex;
                 align-items: center;
+                gap: 3px;
                 height: 16px;
                 line-height: 1;
                 box-shadow: 0 2px 6px rgba(0, 0, 0, 0.32);
@@ -2213,21 +2413,17 @@
             try {
               overlay.remove();
             } catch (_) {}
-            try {
-              Millennium.callServerMethod("luatools", "CheckForUpdatesNow", {
-                contentScriptQuery: "",
-              }).then(function (res) {
-                try {
-                  const payload =
-                    typeof res === "string" ? JSON.parse(res) : res;
-                  const msg =
-                    payload && payload.message
-                      ? String(payload.message)
-                      : lt("No updates available.");
-                  ShowLuaToolsAlert("LuaTools", msg);
-                } catch (_) {}
-              });
-            } catch (_) {}
+            ltCallApp(
+              "CheckForUpdatesNow",
+              {},
+              "app.error.updates",
+              "Could not check for updates. Make sure the LuaTools app is open and try again.",
+            ).then(function (payload) {
+              if (!payload) return; // failure already alerted
+              const msg =
+                payload.message ? String(payload.message) : lt("No updates available.");
+              ShowLuaToolsAlert("LuaTools", msg);
+            });
           });
         }
 
@@ -2238,12 +2434,12 @@
               overlay.remove();
             } catch (_) {}
             const url = "https://discord.gg/luatools";
-            try {
-              Millennium.callServerMethod("luatools", "OpenExternalUrl", {
-                url,
-                contentScriptQuery: "",
-              });
-            } catch (_) {}
+            ltCallApp(
+              "OpenExternalUrl",
+              { url },
+              "app.error.openUrl",
+              "Could not open the link. Make sure the LuaTools app is open and try again.",
+            );
           });
         }
 
@@ -2538,9 +2734,11 @@
   let settingsMenuPending = false;
 
   // Helper: show download source picker & progress modal
-  function showTestPopup() {
+  function showTestPopup(appid) {
     // Avoid duplicates
     if (document.querySelector(".luatools-overlay")) return;
+    // Remember who opened the popup so closing it can hand focus back (keyboard/gamepad users).
+    const opener = document.activeElement;
     // Close settings popup if open so modals don't overlap
     try {
       const s = document.querySelector(".luatools-settings-overlay");
@@ -2562,11 +2760,86 @@
     const title = document.createElement("div");
     title.id = "lt-dl-title";
     title.className = "luatools-title lt-modal-title";
-    title.style.marginBottom = "16px";
     title.replaceChildren(
       ltIcon("download", "color:" + colors.accent + ";", 20),
       ltLabel(lt("Select Download Source")),
     );
+
+    // Header row: title + AppID pill. The poll rewrites only the title node's children,
+    // so the pill survives title changes ("Downloading…", "Game Added!").
+    const header = document.createElement("div");
+    header.className = "lt-modal-header";
+    header.appendChild(title);
+    if (Number.isInteger(appid)) {
+      // Click/Enter/A copies the bare number; the label flashes "Copied!" for ~1.5 s.
+      const pillText = "AppID " + appid;
+      const appidPill = document.createElement("button");
+      appidPill.type = "button";
+      appidPill.className = "lt-appid-pill";
+      appidPill.textContent = pillText;
+      appidPill.title = t("appid.copy.title", "Click to copy");
+      const pillAria = t("appid.copy.aria", "Copy AppID {appid}").replace("{appid}", String(appid));
+      appidPill.setAttribute("aria-label", pillAria);
+      let pillTimer = null;
+      appidPill.onclick = function () {
+        ltCopyText(String(appid)).then(function (ok) {
+          clearTimeout(pillTimer);
+          appidPill.style.minWidth = appidPill.offsetWidth + "px"; // no layout jump on swap
+          appidPill.classList.toggle("is-copied", ok);
+          const feedback = ok
+            ? t("appid.copy.done", "Copied!")
+            : t("appid.copy.failed", "Copy failed");
+          appidPill.textContent = feedback;
+          appidPill.setAttribute("aria-label", feedback); // aria-label wins over text — swap it too
+          pillTimer = setTimeout(function () {
+            appidPill.classList.remove("is-copied");
+            appidPill.textContent = pillText;
+            appidPill.setAttribute("aria-label", pillAria);
+            appidPill.style.minWidth = "";
+          }, 1500);
+        });
+      };
+      header.appendChild(appidPill);
+    }
+
+    // Denuvo callout — shown before the user picks a source, i.e. before confirming the add.
+    let drmCallout = null;
+    if (detectDenuvo().isDenuvo) {
+      drmCallout = document.createElement("div");
+      drmCallout.className = "lt-drm-callout";
+      drmCallout.setAttribute("role", "note");
+      const drmText = document.createElement("div");
+      const drmTitle = document.createElement("strong");
+      drmTitle.textContent = t("denuvo.callout.title", "Denuvo detected");
+      const drmBody = document.createElement("div");
+      drmBody.textContent = t(
+        "denuvo.callout.body",
+        "This game ships with Denuvo anti-tamper DRM and may not run after being added.",
+      );
+      drmText.append(drmTitle, drmBody);
+      // OpenFix is a real app route (/open/fix/{appid} → app Fixes page for this game).
+      if (Number.isInteger(appid)) {
+        const fixesBtn = document.createElement("button");
+        fixesBtn.type = "button";
+        fixesBtn.className = "lt-drm-fixes-btn";
+        fixesBtn.setAttribute(
+          "aria-label",
+          t("denuvo.callout.fixesAria", "View fixes for this game in the LuaTools app"),
+        );
+        fixesBtn.replaceChildren(
+          ltIcon("wrench", "", 14),
+          ltLabel(t("denuvo.callout.fixes", "View fixes")),
+        );
+        fixesBtn.onclick = function () {
+          ltCallApp("OpenFix", { appid }, "app.error.openFix", "Could not open fixes. Make sure the LuaTools app is open and try again.");
+        };
+        drmText.appendChild(fixesBtn);
+      }
+      drmCallout.replaceChildren(
+        ltIcon("shield-alert", "color:" + LT_DESIGN.status.warning + ";margin-top:2px;", 18),
+        drmText,
+      );
+    }
 
     // API list container — starts empty; the "Checking availability…" status below conveys
     // loading, and renderSources() fills this once the app reports sources.
@@ -2619,20 +2892,22 @@
     hideBtn.href = "#";
     hideBtn.onclick = function (e) {
       e.preventDefault();
-      // If the add already finished, the label is "Close" → just dismiss. Otherwise cancel it.
-      var label = (hideBtn.textContent || "").trim().toLowerCase();
-      if (label !== lt("Close").trim().toLowerCase()) cancelOperation();
-      cleanup();
+      dismiss();
     };
     btnRow.appendChild(hideBtn);
 
-    modal.appendChild(title);
+    modal.appendChild(header);
+    if (drmCallout) modal.appendChild(drmCallout);
     modal.appendChild(apiListContainer);
     modal.appendChild(body);
     modal.appendChild(progressWrap);
     modal.appendChild(btnRow);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
+    document.addEventListener("keydown", onEscape);
+    try {
+      hideBtn.focus({ preventScroll: true });
+    } catch (_) {}
 
     // Re-scan elements for gamepad navigation
     setTimeout(function () {
@@ -2641,11 +2916,39 @@
       }
     }, 150);
 
+    // If the add already finished, the label is "Close" → just dismiss. Otherwise cancel it.
+    function dismiss() {
+      var label = (hideBtn.textContent || "").trim().toLowerCase();
+      if (label !== lt("Close").trim().toLowerCase()) cancelOperation();
+      cleanup();
+    }
+
+    // Escape = same as the Cancel/Close button. With a gamepad connected the gamepad system
+    // swallows Escape in the capture phase (Steam maps B to it), so this only serves keyboards.
+    // The overlay can also be removed out from under us (closeSettingsOverlay), so self-detach.
+    function onEscape(e) {
+      if (!overlay.isConnected) {
+        document.removeEventListener("keydown", onEscape);
+        return;
+      }
+      // An alert on top (e.g. "View fixes" failed) — Esc is meant for it, not to cancel the add.
+      if (document.querySelector(".luatools-alert-overlay")) return;
+      if (e.key === "Escape") {
+        e.preventDefault();
+        dismiss();
+      }
+    }
+
     function cleanup() {
       // The status poll (setInterval in startLuaToolsAdd) lives in another scope — this is the only place a
       // cancel/close can reach it. Skipping this leaks the timer and floods the CDP bridge (picker hangs).
       if (runState.pollTimer) { clearInterval(runState.pollTimer); runState.pollTimer = null; }
+      document.removeEventListener("keydown", onEscape);
       overlay.remove();
+      // Hand focus back to the opener (the Add button is removed on success → isConnected guard).
+      try {
+        if (opener && opener.isConnected && typeof opener.focus === "function") opener.focus();
+      } catch (_) {}
     }
 
     // Tell the backend to stop the in-flight add. The caller (the button) closes the popup
@@ -2845,6 +3148,80 @@
     }
   }
 
+  // Call an app action and tell the user when it didn't happen. The CDP polyfill never rejects
+  // when the desktop app is gone: after ~5 s it resolves a bare {success:true} and records the
+  // call in window.Millennium._timedOut. That record, a rejection and {success:false} all count
+  // as failure → localized alert. Resolves the payload on success, null on failure.
+  function ltCallApp(method, args, errorKey, errorFallback) {
+    const bridge = window.Millennium;
+    const log = bridge && bridge._timedOut;
+    // Snapshot by identity, not index: the injector drains _timedOut with splice(0).
+    const before = Array.isArray(log) ? log.slice() : [];
+    let call;
+    try {
+      call = Promise.resolve(bridge.callServerMethod("luatools", method, args || {}));
+    } catch (e) {
+      call = Promise.reject(e);
+    }
+    return call
+      .then(function (res) {
+        const payload = typeof res === "string" ? JSON.parse(res) : res;
+        const timedOut =
+          Array.isArray(log) &&
+          log.some(function (x) {
+            return x && x.m === method && before.indexOf(x) === -1;
+          });
+        if (timedOut || (payload && payload.success === false)) {
+          throw new Error(timedOut ? "bridge timeout" : String(payload.error || "failed"));
+        }
+        return payload;
+      })
+      .catch(function (e) {
+        backendLog("LuaTools: " + method + " failed: " + e);
+        ShowLuaToolsAlert("LuaTools", t(errorKey, errorFallback));
+        return null;
+      });
+  }
+
+  // Copy text to the clipboard → Promise<boolean>. Steam's CEF may refuse navigator.clipboard
+  // (permission / no user activation), so fall back to execCommand("copy") on an off-screen
+  // readonly textarea: readonly keeps the Big Picture on-screen keyboard closed, fixed position
+  // plus preventScroll keeps the page from jumping, and focus goes back where it was.
+  function ltCopyText(text) {
+    const legacyCopy = function () {
+      const prevFocus = document.activeElement;
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.setAttribute("aria-hidden", "true");
+      ta.tabIndex = -1;
+      ta.style.cssText = "position:fixed;top:0;left:-9999px;opacity:0;pointer-events:none;";
+      document.body.appendChild(ta);
+      let ok = false;
+      try {
+        ta.focus({ preventScroll: true });
+        ta.select();
+        ok = document.execCommand("copy");
+      } catch (_) {}
+      ta.remove();
+      try {
+        if (prevFocus && typeof prevFocus.focus === "function") prevFocus.focus({ preventScroll: true });
+      } catch (_) {}
+      return ok;
+    };
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        return navigator.clipboard.writeText(text).then(
+          function () {
+            return true;
+          },
+          legacyCopy,
+        );
+      }
+    } catch (_) {}
+    return Promise.resolve(legacyCopy());
+  }
+
   // Custom modal confirm dialog, styled to match Steam
   function showLuaToolsConfirm(title, message, onConfirm, onCancel) {
     // Always close settings popup first so the confirm is visible on top
@@ -2976,6 +3353,8 @@
   // Function to add the LuaTools button
   // Add throttle to prevent excessive executions
   let lastButtonCheckTime = 0;
+  // appid whose status-pill build (2 RPCs) is in flight — stops observer bursts from stacking fetches.
+  let pillsBuildingFor = null;
   const BUTTON_CHECK_THROTTLE = 500; // Only run once every 500ms
 
   // Steam's store-header container class is obfuscated and gets regenerated on client
@@ -3130,7 +3509,13 @@
       if (window.__LuaToolsOrderObservedEl !== steamdbContainer) {
         try {
           if (window.__LuaToolsOrderObserver) window.__LuaToolsOrderObserver.disconnect();
-          const obs = new MutationObserver(function () { ltPinButtons(steamdbContainer); });
+          // Also (re)build the status pills here: the Add button lands in this container only after
+          // the async HasLuaToolsForApp check, i.e. AFTER the addLuaToolsButton() call that needed it
+          // for the pills — and nothing else calls addLuaToolsButton() once the header is up.
+          const obs = new MutationObserver(function () {
+            ltPinButtons(steamdbContainer);
+            updateStatusPills();
+          });
           obs.observe(steamdbContainer, { childList: true });
           window.__LuaToolsOrderObserver = obs;
           window.__LuaToolsOrderObservedEl = steamdbContainer;
@@ -3381,7 +3766,10 @@
         }
       }
 
-      // status pills — only run once per appid
+      // status pills — built once per appid (and once per Denuvo state). A hoisted function
+      // declaration on purpose: the container observer above calls it too, and this call can be
+      // skipped by an early return earlier in addLuaToolsButton().
+      function updateStatusPills() {
       try {
         const match =
           window.location.href.match(
@@ -3402,12 +3790,18 @@
               ".luatools-pills-container",
             );
             if (
+              pillsBuildingFor !== appid &&
               !(
                 existingPills &&
                 existingPills.dataset.appid === String(appid) &&
-                existingPills.dataset.content
+                existingPills.dataset.content &&
+                existingPills.dataset.denuvo === String(detectDenuvo().isDenuvo)
               )
             ) {
+              pillsBuildingFor = appid;
+              const buildDone = function () {
+                pillsBuildingFor = null;
+              };
               fetchGamesDatabase().then(function (db) {
                 const btn = steamdbContainer.querySelector(".luatools-button");
                 if (!btn) return;
@@ -3426,12 +3820,11 @@
                 const key = String(appid);
                 const gameData = db && db[key] ? db[key] : null;
 
-                // check denuvo
-                const drmNotice = document.querySelector(".DRM_notice");
-                const hasDenuvo =
-                  drmNotice && drmNotice.textContent.includes("Denuvo");
+                // check denuvo (all .DRM_notice nodes + purchase-area fallback, case-insensitive)
+                const hasDenuvo = detectDenuvo().isDenuvo;
+                pillsContainer.dataset.denuvo = String(hasDenuvo);
 
-                fetchFixes(appid).then(function (fixesData) {
+                return fetchFixes(appid).then(function (fixesData) {
                   const hasFixes =
                     fixesData &&
                     ((fixesData.genericFix &&
@@ -3487,17 +3880,22 @@
                   if (showDenuvoPill) {
                     const pill = document.createElement("span");
                     pill.className = "luatools-pill orange";
-                    pill.textContent = t("gameStatus.denuvo", "Denuvo");
+                    pill.replaceChildren(
+                      ltIcon("shield-alert", "", 10),
+                      ltLabel(t("gameStatus.denuvo", "Denuvo")),
+                    );
                     pillsContainer.appendChild(pill);
                   }
                 });
-              });
+              }).then(buildDone, buildDone);
             }
           }
         }
       } catch (e) {
-        /* ignore */
+        pillsBuildingFor = null;
       }
+      }
+      updateStatusPills();
     } else {
       if (!logState.missingOnce) {
         backendLog("LuaTools: steamdbContainer not found on this page");
@@ -3888,12 +4286,12 @@
         a.oncontextmenu = function (e) {
           e.preventDefault();
           const url = "https://steamdb.info/app/" + String(appid) + "/";
-          try {
-            Millennium.callServerMethod("luatools", "OpenExternalUrl", {
-              url,
-              contentScriptQuery: "",
-            });
-          } catch (_) {}
+          ltCallApp(
+            "OpenExternalUrl",
+            { url },
+            "app.error.openUrl",
+            "Could not open the link. Make sure the LuaTools app is open and try again.",
+          );
         };
         body.appendChild(a);
       });
