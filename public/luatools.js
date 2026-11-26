@@ -594,6 +594,24 @@
     "appid.copy.aria": "Copiar AppID {appid}",
     "appid.copy.done": "Copiado!",
     "appid.copy.failed": "Falha ao copiar",
+    "gameStatus.backup": "Backup",
+    "backup.add.title": "Adicionar via Backup",
+    "backup.add.badge": "Local",
+    "backup.meta.manifests": "{count} manifests",
+    "backup.meta.manifestOne": "1 manifest",
+    "backup.meta.luaOnly": "Apenas .lua (sem manifests)",
+    "backup.meta.updated": "Atualizado em {date}",
+    "backup.warn.noManifests": "Este backup contém apenas o arquivo .lua (sem manifests). A Steam pode precisar baixar os depots separadamente.",
+    "backup.restore.title": "Restaurando do Backup…",
+    "backup.restore.progress": "Verificando e restaurando backup local… Isso pode levar alguns segundos.",
+    "backup.restore.success": "Jogo restaurado do backup local com sucesso.",
+    "backup.restore.successWithManifests": "Restaurado do backup local ({count} manifests).",
+    "backup.restore.successOneManifest": "Restaurado do backup local (1 manifest).",
+    "backup.error.disabled": "O backup local está desativado nas configurações do LuaTools.",
+    "backup.error.notFound": "Nenhum backup local encontrado para este jogo.",
+    "backup.error.corrupt": "O backup falhou na verificação de integridade e não foi instalado.",
+    "backup.error.timeout": "A restauração do backup excedeu o tempo limite. Verifique o app LuaTools e tente novamente.",
+    "backup.error.generic": "Falha ao restaurar o jogo pelo backup local. Tente novamente ou reabra esta janela para escolher uma fonte online.",
   };
   const LT_LOCALE_PATCH = { "pt-BR": LT_LOCALE_PATCH_PT, pt: LT_LOCALE_PATCH_PT };
   const LT_LOCALE_CACHE = {};
@@ -655,6 +673,9 @@
       CheckForUpdatesNow: () => call("CheckForUpdatesNow", {}),
       ReadLoadedApps: () => call("ReadLoadedApps", {}),
       DismissLoadedApps: () => call("DismissLoadedApps", {}),
+      GetBackupIndex: () => call("GetBackupIndex", {}),
+      GetBackupStatus: (a) => call("GetBackupStatus", { appid: Number(aid(a)) }),
+      InstallFromBackup: (a) => call("InstallFromBackup", { appid: Number(aid(a)) }),
       // GetSettingsConfig is a DATA fetch the frontend runs on load — it must NOT
       // open anything (the Settings *button* opens the app via /open/settings).
       // Return a benign empty config so settings loading succeeds silently.
@@ -802,10 +823,199 @@
     return { isDenuvo: false, via: "" };
   }
 
+  // Local manifest backup discovery & restore cache (session-scoped).
+  // Old GUIs (< v1.8.7 / unmapped bridge) return bare {success:true} without boolean `enabled`,
+  // switching apiState to "unsupported" on the first probe without waiting 5s.
+  const backupState = {
+    apiState: "unknown", // "unknown" | "supported" | "unsupported"
+    statusByApp: Object.create(null),
+    inFlight: Object.create(null),
+    cooldownUntil: 0,
+  };
+
+  function invalidateBackupCache(appid) {
+    if (appid == null) {
+      backupState.statusByApp = Object.create(null);
+      backupState.inFlight = Object.create(null);
+      return;
+    }
+    const key = String(appid);
+    delete backupState.statusByApp[key];
+    delete backupState.inFlight[key];
+  }
+
+  function getCachedBackupStatus(appid) {
+    const key = String(appid);
+    return Object.prototype.hasOwnProperty.call(backupState.statusByApp, key)
+      ? backupState.statusByApp[key]
+      : null;
+  }
+
+  function ltBridgeCallRaw(method, args) {
+    const bridge = window.Millennium;
+    if (!bridge || typeof bridge.callServerMethod !== "function") {
+      return Promise.resolve({
+        payload: null,
+        timedOut: false,
+        error: new Error("Bridge unavailable"),
+      });
+    }
+    const log = bridge._timedOut;
+    // Snapshot by identity, not index: the injector drains _timedOut with splice(0).
+    const before = Array.isArray(log) ? log.slice() : [];
+    let call;
+    try {
+      call = Promise.resolve(bridge.callServerMethod("luatools", method, args || {}));
+    } catch (e) {
+      call = Promise.reject(e);
+    }
+    return call
+      .then(function (res) {
+        const payload = typeof res === "string" ? JSON.parse(res) : res;
+        const timedOut =
+          Array.isArray(log) &&
+          log.some(function (x) {
+            return x && x.m === method && before.indexOf(x) === -1;
+          });
+        return { payload, timedOut, error: null };
+      })
+      .catch(function (err) {
+        return { payload: null, timedOut: false, error: err };
+      });
+  }
+
+  function fetchBackupStatus(appid, forceRefresh) {
+    if (!Number.isInteger(appid) || appid <= 0) return Promise.resolve(null);
+    if (backupState.apiState === "unsupported") return Promise.resolve(null);
+    if (!forceRefresh && backupState.cooldownUntil > Date.now()) {
+      return Promise.resolve(null);
+    }
+    const key = String(appid);
+    if (
+      !forceRefresh &&
+      Object.prototype.hasOwnProperty.call(backupState.statusByApp, key)
+    ) {
+      return Promise.resolve(backupState.statusByApp[key]);
+    }
+    if (backupState.inFlight[key]) return backupState.inFlight[key];
+
+    const promise = ltBridgeCallRaw("GetBackupStatus", { appid })
+      .then(function (res) {
+        if (res.timedOut) {
+          backupState.cooldownUntil = Date.now() + 10000;
+          return null;
+        }
+        if (res.error || !res.payload || typeof res.payload !== "object") {
+          return null;
+        }
+        if (res.payload.success === false) {
+          if (res.payload.error === "Not found") {
+            backupState.apiState = "unsupported";
+          }
+          return null;
+        }
+        if (typeof res.payload.enabled !== "boolean") {
+          backupState.apiState = "unsupported";
+          return null;
+        }
+        backupState.apiState = "supported";
+        backupState.cooldownUntil = 0;
+        const normalized = {
+          enabled: res.payload.enabled === true,
+          available: res.payload.enabled === true && res.payload.available === true,
+          hasManifests: res.payload.hasManifests === true,
+          manifestCount: Number.isFinite(Number(res.payload.manifestCount))
+            ? Math.max(0, Number(res.payload.manifestCount))
+            : 0,
+          updatedAtUtc:
+            typeof res.payload.updatedAtUtc === "string" && res.payload.updatedAtUtc
+              ? res.payload.updatedAtUtc
+              : null,
+        };
+        backupState.statusByApp[key] = normalized;
+        return normalized;
+      })
+      .finally(function () {
+        delete backupState.inFlight[key];
+      });
+
+    backupState.inFlight[key] = promise;
+    return promise;
+  }
+
+  function formatBackupDate(iso) {
+    if (!iso) return "";
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso);
+      const lang =
+        (window.__LuaToolsI18n && window.__LuaToolsI18n.language) || undefined;
+      return d.toLocaleString(lang, { dateStyle: "short", timeStyle: "short" });
+    } catch (_) {
+      return String(iso).slice(0, 16).replace("T", " ");
+    }
+  }
+
+  function mapBackupInstallError(rawError) {
+    const msg = String(rawError || "");
+    if (/not enabled|disabled/i.test(msg)) {
+      return t(
+        "backup.error.disabled",
+        "Local backup is disabled in LuaTools settings.",
+      );
+    }
+    if (/no backup|not found/i.test(msg)) {
+      return t(
+        "backup.error.notFound",
+        "No local backup was found for this game.",
+      );
+    }
+    if (/integrity|verif|refused|valid/i.test(msg)) {
+      return t(
+        "backup.error.corrupt",
+        "Backup failed integrity verification and was not installed.",
+      );
+    }
+    return t(
+      "backup.error.generic",
+      "Failed to restore game from local backup. Try again or reopen this window to choose a download source.",
+    );
+  }
+
+  function formatBackupMeta(status) {
+    if (!status) return "";
+    let countText;
+    if (!status.hasManifests || status.manifestCount === 0) {
+      countText = t("backup.meta.luaOnly", "Lua only (no manifests)");
+    } else if (status.manifestCount === 1) {
+      countText = t("backup.meta.manifestOne", "1 manifest");
+    } else {
+      countText = t("backup.meta.manifests", "{count} manifests").replace(
+        "{count}",
+        String(status.manifestCount),
+      );
+    }
+    if (status.updatedAtUtc) {
+      const dateStr = formatBackupDate(status.updatedAtUtc);
+      if (dateStr) {
+        const updatedText = t("backup.meta.updated", "Updated {date}").replace(
+          "{date}",
+          dateStr,
+        );
+        return countText + " · " + updatedText;
+      }
+    }
+    return countText;
+  }
+
   // Store-page button is an Add <-> Remove toggle. Mode is tracked on the element
   // via data-lt-mode so the delegated click handler knows which action to run.
   function startLuaToolsAdd(appid, anchor) {
-    if (runState.inProgress && runState.appid === appid) return;
+    if (runState.inProgress && runState.appid === appid) {
+      if (document.querySelector(".luatools-overlay")) return;
+      runState.inProgress = false;
+      runState.appid = null;
+    }
     runState.inProgress = true;
     runState.appid = appid;
     showTestPopup(appid);
@@ -821,6 +1031,7 @@
 
     let finished = false;
     let picking = false;
+    let backupInstalling = false;
     let renderKey = "";
 
     // Bind this run to its own popup: a late reply from a cancelled run must not paint (or
@@ -831,6 +1042,22 @@
     };
     const q = function (sel) {
       return overlayAlive() ? ownOverlay.querySelector(sel) : null;
+    };
+    const setBackupBtnDisabled = function (disabled) {
+      const btn = q(".lt-backup-card");
+      if (btn) btn.disabled = !!disabled;
+    };
+    const disableOnlineSources = function () {
+      const list = q(".luatools-api-list");
+      if (!list) return;
+      const items = list.querySelectorAll(".luatools-api-item.is-clickable");
+      for (let i = 0; i < items.length; i++) {
+        items[i].classList.remove("is-clickable");
+        items[i].removeAttribute("role");
+        items[i].tabIndex = -1;
+        items[i].onclick = null;
+        items[i].onkeydown = null;
+      }
     };
 
     const renderSources = function (sources, clickable) {
@@ -902,8 +1129,9 @@
           item.tabIndex = 0;
           item.setAttribute("role", "button");
           const pickSource = function () {
-            if (picking) return;
+            if (picking || backupInstalling) return;
             picking = true;
+            setBackupBtnDisabled(true);
             renderKey = "";
             const st = q(".luatools-status");
             if (st) st.textContent = lt("Starting download…");
@@ -942,11 +1170,288 @@
       clearInterval(timer);
       if (runState.pollTimer !== null && runState.pollTimer !== timer) return; // a newer run owns runState
       runState.pollTimer = null;
+      if (!overlayAlive() && document.querySelector(".luatools-overlay")) return;
       if (runState.appid === appid) {
         runState.inProgress = false;
         runState.appid = null;
       }
     };
+
+    const triggerBackupInstall = function (st) {
+      if (finished || picking || backupInstalling) return;
+      backupInstalling = true;
+      picking = true;
+
+      clearInterval(timer);
+      if (runState.pollTimer === timer) runState.pollTimer = null;
+
+      try {
+        window.Millennium.callServerMethod("luatools", "CancelAddViaLuaTools", {
+          appid,
+          contentScriptQuery: "",
+        }).catch(function () {});
+      } catch (_) {}
+
+      setBackupBtnDisabled(true);
+      disableOnlineSources();
+
+      const colors = getThemeColors();
+      const titleEl = q(".luatools-title");
+      const statusEl = q(".luatools-status");
+      const wrap = q(".luatools-progress-wrap");
+
+      if (titleEl) {
+        titleEl.replaceChildren(
+          ltIcon("archive", "color:" + colors.accent + ";", 20),
+          ltLabel(t("backup.restore.title", "Restoring from Backup…")),
+        );
+      }
+      if (statusEl) {
+        statusEl.style.color = colors.textSecondary;
+        statusEl.replaceChildren(
+          ltIcon("spinner", "color:" + colors.accentLight + ";", 15),
+          ltLabel(
+            t(
+              "backup.restore.progress",
+              "Verifying and restoring local backup… This may take a few seconds.",
+            ),
+          ),
+        );
+      }
+      if (wrap) wrap.style.display = "none";
+      if (window.GamepadNav) window.GamepadNav.scanElements();
+
+      const finishBackupSuccess = function (manifestCount) {
+        invalidateBackupCache(appid);
+        if (anchor && anchor.parentElement) anchor.parentElement.removeChild(anchor);
+        window.__LuaToolsButtonInserted = false;
+        window.__LuaToolsGameAdded = true;
+        releaseRun();
+        if (!overlayAlive()) return;
+        const tEl = q(".luatools-title");
+        if (tEl) {
+          tEl.replaceChildren(
+            ltIcon("check", "color:" + LT_DESIGN.status.success + ";", 20),
+            ltLabel(lt("Game Added!")),
+          );
+        }
+        const sEl = q(".luatools-status");
+        if (sEl) {
+          sEl.style.color = colors.textSecondary;
+          const cnt = Number.isFinite(Number(manifestCount))
+            ? Math.max(0, Number(manifestCount))
+            : 0;
+          if (cnt === 1) {
+            sEl.textContent = t(
+              "backup.restore.successOneManifest",
+              "Restored from local backup (1 manifest).",
+            );
+          } else if (cnt > 1) {
+            sEl.textContent = t(
+              "backup.restore.successWithManifests",
+              "Restored from local backup ({count} manifests).",
+            ).replace("{count}", String(cnt));
+          } else {
+            sEl.textContent = t(
+              "backup.restore.success",
+              "Game restored from local backup successfully.",
+            );
+          }
+        }
+        const hide = q(".luatools-hide-btn");
+        if (hide) {
+          hide.classList.add("primary");
+          setButtonLabel(hide, lt("Close"));
+        }
+        setBackupBtnDisabled(true);
+        if (window.GamepadNav) window.GamepadNav.scanElements();
+      };
+
+      const finishBackupError = function (message) {
+        backupInstalling = false;
+        picking = false;
+        if (!overlayAlive()) {
+          releaseRun();
+          return;
+        }
+        const tEl = q(".luatools-title");
+        if (tEl) {
+          tEl.replaceChildren(
+            ltIcon("error", "color:" + LT_DESIGN.status.danger + ";", 20),
+            ltLabel(lt("Failed")),
+          );
+        }
+        const sEl = q(".luatools-status");
+        if (sEl) {
+          sEl.style.color = LT_DESIGN.status.danger;
+          sEl.textContent = message;
+        }
+        // Online sources stay disabled: CancelAddViaLuaTools dropped the app-side add session and the
+        // poll is stopped, so a pick here would be a silent no-op. Reopening the popup starts a new add.
+        setBackupBtnDisabled(false);
+        if (window.GamepadNav) window.GamepadNav.scanElements();
+      };
+
+      ltBridgeCallRaw("InstallFromBackup", { appid }).then(function (res) {
+        if (finished || !overlayAlive()) {
+          if (
+            !res.timedOut &&
+            res.payload &&
+            res.payload.success === true &&
+            res.payload.luaInstalled === true
+          ) {
+            invalidateBackupCache(appid);
+            if (anchor && anchor.parentElement) anchor.parentElement.removeChild(anchor);
+            window.__LuaToolsButtonInserted = false;
+            window.__LuaToolsGameAdded = true;
+          }
+          releaseRun();
+          return;
+        }
+
+        if (!res.timedOut && res.payload && res.payload.success === false) {
+          finishBackupError(mapBackupInstallError(res.payload.error));
+          return;
+        }
+
+        if (
+          !res.timedOut &&
+          res.payload &&
+          res.payload.success === true &&
+          typeof res.payload.luaInstalled === "boolean"
+        ) {
+          if (res.payload.luaInstalled === true) {
+            finishBackupSuccess(Number(res.payload.manifestCount) || 0);
+          } else {
+            finishBackupError(
+              t(
+                "backup.error.generic",
+                "Failed to restore game from local backup. Try again or reopen this window to choose a download source.",
+              ),
+            );
+          }
+          return;
+        }
+
+        const isTimedOutShape =
+          res.timedOut ||
+          (res.payload &&
+            res.payload.success === true &&
+            typeof res.payload.luaInstalled !== "boolean");
+
+        ltBridgeCallRaw("HasLuaToolsForApp", { appid }).then(function (chk) {
+          if (finished || !overlayAlive()) {
+            if (
+              !chk.timedOut &&
+              chk.payload &&
+              chk.payload.success === true &&
+              chk.payload.exists === true
+            ) {
+              invalidateBackupCache(appid);
+              if (anchor && anchor.parentElement) anchor.parentElement.removeChild(anchor);
+              window.__LuaToolsButtonInserted = false;
+              window.__LuaToolsGameAdded = true;
+            }
+            releaseRun();
+            return;
+          }
+          if (
+            !chk.timedOut &&
+            chk.payload &&
+            chk.payload.success === true &&
+            chk.payload.exists === true
+          ) {
+            finishBackupSuccess(st.hasManifests ? st.manifestCount : 0);
+          } else {
+            finishBackupError(
+              isTimedOutShape
+                ? t(
+                    "backup.error.timeout",
+                    "Backup restore timed out. Check the LuaTools app and try again.",
+                  )
+                : t(
+                    "backup.error.generic",
+                    "Failed to restore game from local backup. Try again or reopen this window to choose a download source.",
+                  ),
+            );
+          }
+        });
+      });
+    };
+
+    const renderBackupSection = function (st) {
+      if (finished || !overlayAlive() || !st || !st.enabled || !st.available) return;
+      const section = q(".lt-backup-section");
+      if (!section) return;
+      const colors = getThemeColors();
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "lt-backup-card";
+      btn.disabled = !!(picking || backupInstalling);
+
+      const head = document.createElement("div");
+      head.className = "lt-backup-card-head";
+
+      const titleWrap = document.createElement("span");
+      titleWrap.className = "lt-backup-title";
+      titleWrap.appendChild(
+        ltIcon("archive", "color:" + colors.accentLight + ";", 16),
+      );
+      titleWrap.appendChild(ltLabel(t("backup.add.title", "Add via Backup")));
+
+      const badge = document.createElement("span");
+      badge.className = "lt-backup-badge";
+      badge.textContent = t("backup.add.badge", "Local");
+
+      head.appendChild(titleWrap);
+      head.appendChild(badge);
+      btn.appendChild(head);
+
+      const metaText = formatBackupMeta(st);
+      if (metaText) {
+        const meta = document.createElement("div");
+        meta.className = "lt-backup-meta";
+        meta.textContent = metaText;
+        btn.appendChild(meta);
+      }
+
+      btn.onclick = function () {
+        triggerBackupInstall(st);
+      };
+
+      const nodes = [btn];
+      if (!st.hasManifests) {
+        const warn = document.createElement("div");
+        warn.className = "lt-backup-warn";
+        warn.setAttribute("role", "note");
+        warn.appendChild(
+          ltIcon(
+            "shield-alert",
+            "color:" + LT_DESIGN.status.warning + ";margin-top:1px;",
+            15,
+          ),
+        );
+        warn.appendChild(
+          ltLabel(
+            t(
+              "backup.warn.noManifests",
+              "This backup contains only the .lua file (no manifests). Steam may need to download depots separately.",
+            ),
+          ),
+        );
+        nodes.push(warn);
+      }
+
+      section.replaceChildren(...nodes);
+      section.style.display = "flex";
+
+      if (window.GamepadNav) {
+        window.GamepadNav.scanElements();
+      }
+    };
+
+    fetchBackupStatus(appid).then(renderBackupSection);
 
     // App-offline guard. The CDP polyfill never rejects when the desktop app is gone: after ~5 s
     // each call resolves a bare {success:true}, without the add-status fields. Count those and
@@ -954,8 +1459,9 @@
     const POLL_MAX_FAILURES = 5;
     let pollFailures = 0;
     const onPollFailure = function () {
-      if (finished || ++pollFailures < POLL_MAX_FAILURES) return;
+      if (finished || backupInstalling || ++pollFailures < POLL_MAX_FAILURES) return;
       releaseRun();
+      setBackupBtnDisabled(true);
       const titleEl = q(".luatools-title");
       if (titleEl) {
         titleEl.replaceChildren(
@@ -979,12 +1485,13 @@
         hide.classList.add("primary");
         setButtonLabel(hide, lt("Close"));
       }
+      if (window.GamepadNav) window.GamepadNav.scanElements();
     };
 
     const timer = setInterval(function () {
-      if (finished) {
+      if (finished || backupInstalling) {
         clearInterval(timer);
-        runState.pollTimer = null;
+        if (runState.pollTimer === timer) runState.pollTimer = null;
         return;
       }
       if (!overlayAlive()) {
@@ -994,7 +1501,7 @@
       }
       window.Millennium.callServerMethod("luatools", "GetLuaToolsAddStatus", { appid })
         .then(function (st) {
-          if (finished) return; // late reply after success/offline — UI is final
+          if (finished || backupInstalling) return; // late reply after success/offline/backup — UI is final
           if (typeof st === "string") st = JSON.parse(st);
           if (!overlayAlive()) {
             // Popup was closed/cancelled out from under us — stop polling so this timer can't leak.
@@ -1027,6 +1534,8 @@
             runState.pollTimer = null;
             runState.inProgress = false;
             runState.appid = null;
+            invalidateBackupCache(appid);
+            setBackupBtnDisabled(true);
             setTitle("check", LT_DESIGN.status.success, lt("Game Added!"));
             if (statusEl)
               statusEl.textContent =
@@ -1041,6 +1550,7 @@
             if (anchor && anchor.parentElement)
               anchor.parentElement.removeChild(anchor);
             window.__LuaToolsButtonInserted = false;
+            window.__LuaToolsGameAdded = true;
             // Re-render the sources one last time with downloading forced off, so the row that
             // was mid-download resolves to its final status instead of a frozen "Downloading…"
             // spinner (the poll stops here, so nothing else would clear it).
@@ -1063,6 +1573,7 @@
               );
             if (wrap) wrap.style.display = "none";
             picking = false;
+            setBackupBtnDisabled(false);
             renderKey = "";
             if (st.sources && st.sources.length)
               renderSources(st.sources, !st.fastFetch);
@@ -1077,6 +1588,8 @@
             return s.downloading;
           })[0];
           if (dl) {
+            picking = true;
+            setBackupBtnDisabled(true);
             if (st.fastFetch && !st.installed && !st.installStatus)
               setTitle("download", getThemeColors().accent, lt("Downloading…"));
             if (statusEl)
@@ -1095,12 +1608,15 @@
           }
           if (st.sourcesLoaded && st.sources && st.sources.length) {
             if (st.fastFetch) {
+              picking = true;
+              setBackupBtnDisabled(true);
               if (!st.installed && !st.installStatus)
                 setTitle("download", getThemeColors().accent, lt("Downloading…"));
               if (statusEl) statusEl.textContent = lt("Starting download…");
               renderSources(st.sources, false);
             } else {
               // Title already says "Select Download Source" — no redundant bottom line.
+              if (!picking) setBackupBtnDisabled(false);
               if (statusEl) statusEl.textContent = "";
               renderSources(st.sources, true);
             }
@@ -1243,6 +1759,8 @@
     error: '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>',
     "shield-alert":
       '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4M12 16h.01"/>',
+    archive:
+      '<rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9"/><path d="M10 13h4"/>',
     discord:
       '<path fill="currentColor" stroke="none" d="M19.27 5.33C17.94 4.71 16.5 4.26 15 4a.09.09 0 0 0-.07.03c-.18.33-.39.76-.53 1.09a16.09 16.09 0 0 0-4.8 0c-.14-.34-.35-.76-.54-1.09-.01-.02-.04-.03-.07-.03-1.5.26-2.93.71-4.27 1.33-.01 0-.02.01-.03.02-2.72 4.07-3.47 8.03-3.1 11.95 0 .02.01.04.03.05 1.8 1.32 3.53 2.12 5.24 2.65.03.01.06 0 .07-.02.4-.55.76-1.13 1.07-1.74.02-.04 0-.08-.04-.09-.57-.22-1.11-.48-1.64-.78-.04-.02-.04-.08-.01-.11.11-.08.22-.17.33-.25.02-.02.05-.02.07-.01 3.44 1.57 7.15 1.57 10.55 0 .02-.01.05-.01.07.01.11.09.22.17.33.26.04.03.04.09-.01.11-.52.31-1.07.56-1.64.78-.04.01-.05.06-.04.09.32.61.68 1.19 1.07 1.74.03.01.06.02.09.01 1.72-.53 3.45-1.33 5.25-2.65.02-.01.03-.03.03-.05.44-4.53-.73-8.46-3.1-11.95-.01-.01-.02-.02-.04-.02zM8.52 14.91c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12 0 1.17-.84 2.12-1.89 2.12zm6.97 0c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12 0 1.17-.83 2.12-1.89 2.12z"/>',
   });
@@ -1734,6 +2252,81 @@
                 gap: 6px;
             }
 
+            /* Local backup option inside Add modal */
+            .lt-backup-section {
+                display: none;
+                flex-direction: column;
+                gap: 8px;
+                margin-bottom: 14px;
+            }
+            .lt-backup-card {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                width: 100%;
+                box-sizing: border-box;
+                text-align: left;
+                font-family: inherit;
+                padding: 12px 14px;
+                background: rgba(${rgbString}, 0.10);
+                border: 1px solid rgba(${rgbString}, 0.75);
+                border-radius: ${ds.radius.md};
+                color: ${theme.text};
+                cursor: pointer;
+                -webkit-appearance: none;
+                appearance: none;
+                transition: background ${ds.transition}, border-color ${ds.transition}, box-shadow ${ds.transition}, transform ${ds.transition};
+            }
+            .lt-backup-card:hover:not(:disabled) {
+                background: rgba(${rgbString}, 0.18);
+                border-color: ${theme.accent};
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32), 0 0 16px rgba(${rgbString}, 0.22);
+            }
+            .lt-backup-card:disabled {
+                opacity: 0.65;
+                cursor: not-allowed;
+            }
+            .lt-backup-card-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                flex-wrap: wrap;
+                width: 100%;
+            }
+            .lt-backup-title {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 14px;
+                font-weight: 600;
+                color: ${theme.text};
+            }
+            .lt-backup-badge {
+                font-size: 12px;
+                font-weight: 600;
+                color: ${theme.accentLight};
+                flex-shrink: 0;
+            }
+            .lt-backup-meta {
+                font-size: 12px;
+                line-height: 1.4;
+                color: ${theme.textSecondary};
+                font-variant-numeric: tabular-nums;
+            }
+            .lt-backup-warn {
+                display: flex;
+                align-items: flex-start;
+                gap: 8px;
+                padding: 9px 12px;
+                border-radius: ${ds.radius.sm};
+                background: rgba(251, 191, 36, 0.10);
+                border: 1px solid rgba(251, 191, 36, 0.60);
+                color: ${ds.status.warning};
+                font-size: 12px;
+                line-height: 1.45;
+            }
+
             /* Download progress bar */
             .luatools-progress-wrap {
                 display: none;
@@ -2067,6 +2660,7 @@
             .luatools-pill.green { background: rgba(74, 222, 128, 0.16); color: ${ds.status.success}; border: 1px solid rgba(74, 222, 128, 0.36); }
             .luatools-pill.yellow { background: rgba(251, 191, 36, 0.16); color: ${ds.status.warning}; border: 1px solid rgba(251, 191, 36, 0.36); }
             .luatools-pill.orange { background: rgba(251, 146, 60, 0.16); color: ${ds.status.orange}; border: 1px solid rgba(251, 146, 60, 0.36); }
+            .luatools-pill.purple { background: rgba(38, 30, 62, 0.90); color: ${theme.accentLight}; border: 1px solid rgba(${rgbString}, 0.75); }
 
             /* Big Picture gamepad toast */
             #luatools-gamepad-hint {
@@ -2128,14 +2722,16 @@
                 .luatools-btn:hover:not([data-disabled="1"]),
                 .lt-icon-btn:hover,
                 .lt-card-btn:hover,
-                .lt-danger-btn:hover {
+                .lt-danger-btn:hover,
+                .lt-backup-card:hover:not(:disabled) {
                     transform: translateY(-1px);
                 }
                 .luatools-btn:active:not([data-disabled="1"]),
                 .lt-icon-btn:active,
                 .lt-card-btn:active,
                 .lt-danger-btn:active,
-                .luatools-api-item.is-clickable:active {
+                .luatools-api-item.is-clickable:active,
+                .lt-backup-card:active:not(:disabled) {
                     transform: translateY(0) scale(0.98);
                 }
                 .lt-card-btn:hover .lt-icon {
@@ -2540,6 +3136,7 @@
                       )
                         .then(function () {
                           try {
+                            invalidateBackupCache(appid);
                             window.__LuaToolsButtonInserted = false;
                             window.__LuaToolsGameAdded = false;
                             window.__LuaToolsPresenceCheckInFlight = false;
@@ -2841,6 +3438,10 @@
       );
     }
 
+    // Local backup slot — stays hidden unless GetBackupStatus reports available: true.
+    const backupSection = document.createElement("div");
+    backupSection.className = "lt-backup-section";
+
     // API list container — starts empty; the "Checking availability…" status below conveys
     // loading, and renderSources() fills this once the app reports sources.
     const apiListContainer = document.createElement("div");
@@ -2898,6 +3499,7 @@
 
     modal.appendChild(header);
     if (drmCallout) modal.appendChild(drmCallout);
+    modal.appendChild(backupSection);
     modal.appendChild(apiListContainer);
     modal.appendChild(body);
     modal.appendChild(progressWrap);
@@ -3053,12 +3655,21 @@
       }
       // Also remove any download/progress overlays if present
       var list2 = document.getElementsByClassName("luatools-overlay");
+      var hadAddOverlay = !!(list2 && list2.length > 0);
       while (list2 && list2.length > 0) {
         try {
           list2[0].remove();
         } catch (_) {
           break;
         }
+      }
+      if (hadAddOverlay) {
+        if (runState.pollTimer) {
+          clearInterval(runState.pollTimer);
+          runState.pollTimer = null;
+        }
+        runState.inProgress = false;
+        runState.appid = null;
       }
     } catch (_) {}
   }
@@ -3785,6 +4396,21 @@
         if (!isNaN(appid)) {
           const pillBtn = steamdbContainer.querySelector(".luatools-button");
           if (pillBtn) {
+            const appendBackupPill = function (container) {
+              const pill = document.createElement("span");
+              pill.className = "luatools-pill purple luatools-pill-backup";
+              pill.replaceChildren(
+                ltIcon("archive", "", 10),
+                ltLabel(t("gameStatus.backup", "Backup")),
+              );
+              container.appendChild(pill);
+            };
+            const cachedBackup = getCachedBackupStatus(appid);
+            const cachedBackupReady = !!(
+              cachedBackup &&
+              cachedBackup.enabled &&
+              cachedBackup.available
+            );
             // Skip if pills already built for this appid
             var existingPills = pillBtn.querySelector(
               ".luatools-pills-container",
@@ -3795,7 +4421,8 @@
                 existingPills &&
                 existingPills.dataset.appid === String(appid) &&
                 existingPills.dataset.content &&
-                existingPills.dataset.denuvo === String(detectDenuvo().isDenuvo)
+                existingPills.dataset.denuvo === String(detectDenuvo().isDenuvo) &&
+                existingPills.dataset.backup === String(cachedBackupReady)
               )
             ) {
               pillsBuildingFor = appid;
@@ -3832,15 +4459,23 @@
                       (fixesData.onlineFix &&
                         fixesData.onlineFix.status === 200));
                   const showDenuvoPill = hasDenuvo && !hasFixes;
+                  const latestBackup = getCachedBackupStatus(appid);
+                  const hasBackupPill = !!(
+                    latestBackup &&
+                    latestBackup.enabled &&
+                    latestBackup.available
+                  );
 
                   const cacheKey = JSON.stringify({
                     d: gameData || "untested",
                     showDenuvo: showDenuvoPill,
                     hasFixes: hasFixes,
+                    hasBackup: hasBackupPill,
                   });
 
                   if (pillsContainer.dataset.content === cacheKey) return;
                   pillsContainer.dataset.content = cacheKey;
+                  pillsContainer.dataset.backup = String(hasBackupPill);
 
                   pillsContainer.innerHTML = "";
 
@@ -3885,6 +4520,30 @@
                       ltLabel(t("gameStatus.denuvo", "Denuvo")),
                     );
                     pillsContainer.appendChild(pill);
+                  }
+
+                  if (hasBackupPill) {
+                    appendBackupPill(pillsContainer);
+                  } else if (
+                    latestBackup === null &&
+                    backupState.apiState !== "unsupported" &&
+                    backupState.cooldownUntil <= Date.now()
+                  ) {
+                    fetchBackupStatus(appid).then(function (b) {
+                      if (
+                        !b ||
+                        !b.enabled ||
+                        !b.available ||
+                        !pillsContainer.isConnected ||
+                        pillsContainer.dataset.appid !== String(appid)
+                      ) {
+                        return;
+                      }
+                      if (!pillsContainer.querySelector(".luatools-pill-backup")) {
+                        appendBackupPill(pillsContainer);
+                      }
+                      pillsContainer.dataset.backup = "true";
+                    });
                   }
                 });
               }).then(buildDone, buildDone);
@@ -4083,10 +4742,14 @@
             typeof Millennium.callServerMethod === "function"
           ) {
             if (runState.inProgress && runState.appid === appid) {
-              backendLog(
-                "LuaTools: operation already in progress for this appid",
-              );
-              return;
+              if (document.querySelector(".luatools-overlay")) {
+                backendLog(
+                  "LuaTools: operation already in progress for this appid",
+                );
+                return;
+              }
+              runState.inProgress = false;
+              runState.appid = null;
             }
 
             // "Add via LuaTools": reflect the app's real add pipeline in the popup
